@@ -7,26 +7,68 @@
 
 using namespace std;
 
-//TODO Make a Class wrapper for CTMP for easier maintenance
-/**
- * Struct for the header of CTMP which can be modified for the structure.
- */
-struct CTMPHeader {
-    uint8_t magicByte;
-    uint8_t initialPadding;
-    uint16_t length;
-    uint32_t finalPadding;
-};
 
 /**
- * Struct for the whole CTMP message including the header and data.
+ * Class for the whole CTMP message including the header and data.
  */
-struct CTMP {
-    CTMPHeader header;
+class CTMP {
+private:
+    const uint8_t magicByte = 0xCC;
+    const uint8_t HEADER_SIZE = 8;
+    /**
+     * Struct for the header of CTMP which can be modified for the structure.
+     */
+    struct Header {
+        uint8_t magicByte;
+        uint8_t initialPadding;
+        uint16_t length;
+        uint32_t finalPadding;
+    } header;
     vector<uint8_t> data;
+public:
+    /**
+     * Converts the data from a byte array into the class's header struct.
+     * Keeps length in Network Byte order.
+     * @param data header in bytes form
+     */
+    void buildHeaderFromBytes(vector<uint8_t>& data) {
+        if (data.size() != HEADER_SIZE) {
+            // ERROR
+        }
+        header.magicByte = data[0];
+        header.initialPadding = data[1];
+        //Copys the length and padding into their respective variables
+        //Keeps the length in Network byte order;
+        memcpy(&header.length, &data[2], sizeof(header.length));
+        memcpy(&header.length, &data[4], sizeof(header.finalPadding));
+    }
+
+    /**
+     * Converts the header struct into a vector containg all the bytes in correct format and order.
+     * @return (vector<uint8_t>) vector containing the header bytes
+     */
+    vector<uint8_t> convertHeaderToBytes() {
+        vector<uint8_t> data(8);
+        data[0] = header.magicByte;
+        data[1] = header.initialPadding;
+        memcpy(&data[2], &header.length, sizeof(header.length));
+        memcpy(&data[4], &header.finalPadding, sizeof(header.finalPadding));
+    }
+    //Converts length from Network byte order to system byte order.
+    uint16_t getLength() {
+        return ntohs(header.length);
+    }
+
+    void validate() {
+        if (header.magicByte != magicByte) {
+            //ERROR Handling
+        }
+    }
+
+    void assignData(vector<uint8_t>&& data) {
+        this->data = std::move(data);
+    }
 };
-
-
 
 /**
  * A class which will be contained by the handler.
@@ -57,7 +99,10 @@ public:
         queue.push(message);
     }
 
-
+    /**
+     * 
+     * @return share
+     */
     shared_ptr<CTMP> accessMessageItem() {
         destinationClientMutex.lock();
         shared_ptr<CTMP> message = queue.front();
@@ -186,41 +231,38 @@ void receiveSourceClients() {
     int clientSocket = accept(serverSocket, (struct sockaddr *) &sourceClientAddress, &sourceAddressLength);
 
 
-    //Buffer and magic byte
 
-    vector<uint8_t> buffer(8);
-    const uint8_t magicByte = 0xCC;
+
+
+
 
     //Looping for messages from source client
     //Needs a lot of work
     while (true) {
+        //CTMP Wrapper class and buffer
+        CTMP ctmp;
+        vector<uint8_t> headerBuffer(8);
 
-        //Attempt to receive header of CMTP message
-        ssize_t headerBytes = recv(clientSocket, buffer.data(), buffer.size(), 0 );
+        //Attempt to receive header of CMTP message and add it to the class
+        ssize_t headerBytes = recv(clientSocket, headerBuffer.data(), headerBuffer.size(), 0 );
+        ctmp.buildHeaderFromBytes(headerBuffer);
 
-        //Check to see if error getting headerBytes
-        if (headerBytes < 8) {
-            //ERROR HANDLING;
-        }
+        //Perform header validation
+        ctmp.validate();
 
-        //Check magic byte
-        if (buffer[0] != magicByte) {
-            //No magic byte. THrow error
-        }
+        uint16_t dataLength = ctmp.getLength();
 
-        //Convert and output length
-        int length = (buffer[3] << 8) +  buffer[2];
-        cout << "Length received:" << length << endl;
+        //Create buffer for receiving data loop
+        vector<uint8_t> dataBuffer(dataLength);
+        size_t dataReceived = 0;
 
-        //Set the buffer to the size of the entire message
-        buffer.resize(8 + length);
-        //TODO make a loop for receiving the bytes
-        ssize_t newBytes = recv(clientSocket, buffer.data() + 8, length, 0 );
-
-
-        //Check bytes have been received
-        if (newBytes < 0) {
-            //ERROR. Handle appropriately
+        //Loop through, getting all the message
+        while (dataReceived < dataLength) {
+            ssize_t numberOfBytes = recv(clientSocket, dataBuffer.data() + dataReceived, dataLength - dataReceived, 0);
+            if (numberOfBytes <= 0) {
+                //ERROR due to inconmplete data
+            }
+            dataReceived += numberOfBytes;
         }
 
 
@@ -230,12 +272,14 @@ void receiveSourceClients() {
             //ERROR. DROP
         }
 
+        //Move the data to the ctmp, instead of copying it to be more efficient
+        ctmp.assignData(move(dataBuffer));
+
         //MESSAGE is fine- Continue
 
-        close(clientSocket);
-        break;
-
     }
+
+    close(clientSocket);
 
 
 
