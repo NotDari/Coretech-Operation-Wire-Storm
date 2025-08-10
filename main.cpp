@@ -7,6 +7,27 @@
 
 using namespace std;
 
+//TODO Make a Class wrapper for CTMP for easier maintenance
+/**
+ * Struct for the header of CTMP which can be modified for the structure.
+ */
+struct CTMPHeader {
+    uint8_t magicByte;
+    uint8_t initialPadding;
+    uint16_t length;
+    uint32_t finalPadding;
+};
+
+/**
+ * Struct for the whole CTMP message including the header and data.
+ */
+struct CTMP {
+    CTMPHeader header;
+    vector<uint8_t> data;
+};
+
+
+
 /**
  * A class which will be contained by the handler.
  * Will be utilised by a thread to deliver a message to the client.
@@ -14,14 +35,37 @@ using namespace std;
 class DestinationClient {
 private:
     int socketId;
+    //Queue of Pointers to CTMP Messages
+    queue<shared_ptr<CTMP>> queue;
+    //Lock for this class
+    mutex destinationClientMutex;
 
-    //TODO ADD QUEUE OF CMTP MESSAGES
 
 
 public:
     DestinationClient(int socketId) {
         this->socketId = socketId;
     }
+
+    /**
+     * Once it gets the lock for this class,
+     * pushes the message onto the queue.
+     * @param message message to be added to the message queue.
+     */
+    void addMessageToQueue(shared_ptr<CTMP> message) {
+        lock_guard lock(destinationClientMutex);
+        queue.push(message);
+    }
+
+
+    shared_ptr<CTMP> accessMessageItem() {
+        destinationClientMutex.lock();
+        shared_ptr<CTMP> message = queue.front();
+        queue.pop();
+        return message;
+    }
+
+
 
 
 
@@ -42,24 +86,47 @@ public:
  * This class handles the list of destination clients and passing through messages.
  * It also handles the next message to send to a thread.
  */
+
+//TODO Change Singleton Design pattern
 class DestinationClientHandler {
 private:
-    // The list of all the Destination Clients
-    unordered_map<int, DestinationClient> destinationList;
+    // The list of all the Destination Clients. Uses a pointer
+    unordered_map<int, shared_ptr<DestinationClient>> destinationList;
     // A lock to prevent concurrent access of destinationList
     mutex destinationListMutex;
 
     //The queue of Destination Sources which are available
-    std::deque<int> queue;
+    deque<int> queue;
+
+
+    DestinationClientHandler() {}
+
+    //Stops singleton copying
+    DestinationClientHandler(const DestinationClientHandler&) = delete;
+    DestinationClientHandler& operator=(const DestinationClientHandler&) = delete;
+
+    //Creates singleton lock and instance
+    static mutex singleTonMtx;
+    static DestinationClientHandler* instance;
 
 public:
+
+    static DestinationClientHandler* getInstance() {
+        if (instance == nullptr) {
+            std::lock_guard lock(singleTonMtx);
+            if (instance == nullptr) {
+                instance = new DestinationClientHandler();
+            }
+        }
+        return instance;
+    }
 
     //Called when a new destination client is added.
     //Adds it to the hashmap
     void addNewDestination(int socketId) {
         lock_guard lock(destinationListMutex);
-        DestinationClient destinationClient(socketId);
-        destinationList.insert({socketId,destinationClient});
+        shared_ptr<DestinationClient> destinationClientPtr = make_shared<DestinationClient>(socketId);
+        destinationList.insert({socketId,destinationClientPtr});
     }
 
 
@@ -71,10 +138,11 @@ public:
 
 
     //Adds a message to all of the destination clients
-    void addMessage() {
+    //Uses a Shared pointer to stop resource copying.
+    void addMessage(shared_ptr<CTMP> message) {
         lock_guard lock(destinationListMutex);
         for (auto& entry : destinationList) {
-            //TODO fill out message once destination client holds messages
+            entry.second -> addMessageToQueue(message);
         }
     }
 
@@ -85,6 +153,8 @@ public:
 
 
 };
+mutex DestinationClientHandler::singleTonMtx;
+DestinationClientHandler* DestinationClientHandler::instance = nullptr;
 
 
 /**
@@ -205,10 +275,16 @@ void receiveDestinationClients() {
     
     sockaddr_in destinationClientAddress;
     socklen_t dclenIn = sizeof(destinationClientAddress);
+    DestinationClientHandler* handler = DestinationClientHandler::getInstance();
+
+    while (true) {
+        //Accept destination client
+        int destinationClient = accept(destinationSocket, (struct sockaddr *) &destinationClientAddress, &dclenIn);
+        cout << "Destination client found: " << endl;
+        handler->addNewDestination(destinationClient);
+    }
     
-    //Accept destination client
-    int destinationClient = accept(destinationSocket, (struct sockaddr *) &destinationClientAddress, &dclenIn);
-    cout << "Destination client found: " << endl;
+
     
 }
 
@@ -218,9 +294,8 @@ void receiveDestinationClients() {
  * @return (int) - whether or not the program run was successful
  */
 int main() {
-    //Create Destination Client Thread
+    //Create Client Threads
     thread receiveDestThread(receiveDestinationClients);
-    //Create source client thread
     thread receiveSourceThread(receiveSourceClients);
 
     //Join the two threads
