@@ -24,6 +24,9 @@ public:
 
     std::shared_ptr<CTMP> accessMessageItem();
 
+    int getSocketId();
+
+
     bool operator==(const DestinationClient& other) const;
 
 

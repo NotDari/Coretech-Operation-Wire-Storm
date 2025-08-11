@@ -30,6 +30,11 @@
         return message;
     }
 
+    int DestinationClient::getSocketId() {
+        return this->socketId;
+    }
+
+
 
 
     //MAY NOT BE NECESSARY AS CONSIDERING USING HASHMAP
