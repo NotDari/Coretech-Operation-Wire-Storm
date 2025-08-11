@@ -22,19 +22,12 @@ private:
 
 
 
-    DestinationClientHandler() {}
-
-    //Stops singleton copying
-    DestinationClientHandler(const DestinationClientHandler&) = delete;
-    DestinationClientHandler& operator=(const DestinationClientHandler&) = delete;
 
 
-    static std::mutex singleTonMtx;
-    static DestinationClientHandler* instance;
 
 public:
 
-    static DestinationClientHandler* getInstance();
+    DestinationClientHandler() {}
 
     void addNewDestination(int socketId);
 
@@ -53,5 +46,4 @@ public:
 
 
 };
-static std::mutex singleTonMtx;
-static DestinationClientHandler* instance;
+

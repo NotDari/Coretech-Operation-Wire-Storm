@@ -13,7 +13,7 @@ using namespace std;
  * Thread for receiving the source client.
  * Will loop through the messages sent, passing them to the Destination Client Handler.
  */
-void receiveSourceClients() {
+void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
 
     //Creating the server socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -99,7 +99,7 @@ void receiveSourceClients() {
  * At the moment only gets 1 connection, but in future will loop through connections
  * and then send it to the DestinationClientHandler.
  */
-void receiveDestinationClients() {
+void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
     //Create destination client and check it connected 
     int destinationSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (destinationSocket < 0) {
@@ -126,13 +126,12 @@ void receiveDestinationClients() {
     
     sockaddr_in destinationClientAddress;
     socklen_t dclenIn = sizeof(destinationClientAddress);
-    DestinationClientHandler* handler = DestinationClientHandler::getInstance();
 
     while (true) {
         //Accept destination client
         int destinationClient = accept(destinationSocket, (struct sockaddr *) &destinationClientAddress, &dclenIn);
         cout << "Destination client found: " << endl;
-        handler->addNewDestination(destinationClient);
+        destinationClientHandler->addNewDestination(destinationClient);
     }
     
 
@@ -145,9 +144,12 @@ void receiveDestinationClients() {
  * @return (int) - whether or not the program run was successful
  */
 int main() {
+
+    auto destinationClientHandler = std::make_shared<DestinationClientHandler>();
+
     //Create Client Threads
-    thread receiveDestThread(receiveDestinationClients);
-    thread receiveSourceThread(receiveSourceClients);
+    thread receiveDestThread(receiveDestinationClients, destinationClientHandler);
+    thread receiveSourceThread(receiveSourceClients, destinationClientHandler);
 
     //Join the two threads
     receiveDestThread.join();
