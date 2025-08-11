@@ -8,8 +8,8 @@
  */
 class CTMP {
 private:
-    const uint8_t magicByte = 0xCC;
-    const uint8_t HEADER_SIZE = 8;
+    static constexpr  uint8_t magicByte = 0xCC;
+    static constexpr  uint8_t HEADER_SIZE = 8;
     struct Header {
         uint8_t magicByte;
         uint8_t initialPadding;
@@ -25,7 +25,12 @@ public:
 
     uint16_t getLength();
 
+    uint32_t getTotalSize();
+
     void validate();
 
     void assignData(std::vector<uint8_t>&& data);
+
+    std::vector<uint8_t>  getDataInBytes();
+
 };

@@ -16,20 +16,20 @@ private:
     std::mutex destinationClientMutex;
 
 
-
 public:
     DestinationClient(int socketId);
 
-    void addMessageToQueue(std::shared_ptr<CTMP> message);
+
 
     std::shared_ptr<CTMP> accessMessageItem();
 
     int getSocketId();
 
+    void sendMessage();
 
     bool operator==(const DestinationClient& other) const;
 
-
+    void addMessageToQueue(std::shared_ptr<CTMP> message);
 
 
 };

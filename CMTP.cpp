@@ -43,3 +43,11 @@ void CTMP::validate() {
 void CTMP::assignData(std::vector<uint8_t>&& data) {
         this->data = std::move(data);
     }
+
+uint32_t CTMP::getTotalSize() {
+    return getLength() + this->HEADER_SIZE;
+}
+
+std::vector<uint8_t>  CTMP::getDataInBytes() {
+    return this->data;
+}

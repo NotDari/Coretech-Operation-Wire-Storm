@@ -5,6 +5,7 @@
 #include <thread>
 #include "CTMP.h"
 #include "Clients/DestinationClientHandler.h"
+#include "Network/ThreadPool.h"
 
 using namespace std;
 
@@ -152,6 +153,11 @@ int main() {
     thread receiveSourceThread(receiveSourceClients, destinationClientHandler);
 
     //Join the two threads
+    receiveDestThread.join();
+    receiveSourceThread.join();
+
+    ThreadPool threadPool(4, destinationClientHandler);
+
     receiveDestThread.join();
     receiveSourceThread.join();
 
