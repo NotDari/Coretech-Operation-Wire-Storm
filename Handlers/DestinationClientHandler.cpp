@@ -52,7 +52,6 @@ std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClien
      *
      */
 
-    std::cout << "Waiting for message" << std::endl;
     this->conditionVariable.wait(lockQueueSetMap, [this](){ return !this->queue.empty();});
 
     //Getting front element from queue and removing it from set
@@ -97,7 +96,6 @@ void DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
     lock.unlock();
 
     // Adding the message to each destination
-    std::cout << "Adding message" << std::endl;
     for (std::shared_ptr destinationClient : tempDestinationList){
         destinationClient -> addMessageToQueue(message);
     }

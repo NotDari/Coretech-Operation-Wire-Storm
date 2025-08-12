@@ -19,7 +19,7 @@ Expected<ssize_t> SourceClient::retrieveNBytes(std::vector<uint8_t>* buffer, ssi
     while (dataReceived < bytesRetrievalCount) {
         ssize_t numberOfBytes = recv(getSocketId(), buffer->data() + dataReceived, bytesRetrievalCount - dataReceived, 0);
         if (numberOfBytes <= 0) {
-            return {"Data didn't match Length"};
+            return {"Data didn't match Length", LoggerLevel::WARN};
         }
         dataReceived += numberOfBytes;
     }
@@ -32,13 +32,13 @@ Expected<int> SourceClient::readHeader(CTMP& ctmp) {
     //Attempt to receive header of CTMP message and add it to the class
     auto expectedHeader = retrieveNBytes(&headerBuffer, headerSize);
     if (expectedHeader.hasError()) {
-        return expectedHeader.getError();
+        return {expectedHeader.getError(), LoggerLevel::WARN};
     }
     ctmp.buildHeaderFromBytes(headerBuffer);
 
     //Perform header validation
     if (!ctmp.validate()) {
-        return {"CTMP header did not follow Protocol"};
+        return {"CTMP header did not follow Protocol", LoggerLevel::WARN};
     }
     return{0};
 }
@@ -52,14 +52,14 @@ Expected<int> SourceClient::readData(CTMP& ctmp) {
 
     auto expectedData = retrieveNBytes(&dataBuffer, dataLength);
     if (expectedData.hasError()) {
-        return expectedData.getError();
+        return {expectedData.getError(), LoggerLevel::WARN};
     }
 
 
     //This is a check to check the length provided in the header bit is correct
     uint8_t bufferCheck[1];
-    if (recv(getSocketId(), bufferCheck, 1, 0 ) != 0) {
-        return {"Data was too long for length provided"};
+    if (recv(getSocketId(), bufferCheck, 1, 0 ) <= 0) {
+        return {"Data was too long for length provided", LoggerLevel::WARN};
     }
 
     //Move the data to the ctmp, instead of copying it to be more efficient
@@ -75,11 +75,11 @@ Expected<CTMP> SourceClient::readMessage() {
     CTMP ctmp;
     Expected<int> expectedHeader = readHeader(ctmp);
     if (expectedHeader.hasError()) {
-        return {expectedHeader.getError()};
+        return {expectedHeader.getError(), LoggerLevel::WARN};
     }
     Expected<int> expectedData = readData(ctmp);
     if (expectedData.hasError()) {
-        return {expectedData.getError()};
+        return {expectedData.getError(), LoggerLevel::WARN};
     }
 
     return {std::move(ctmp)};

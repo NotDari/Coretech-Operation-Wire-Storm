@@ -1,18 +1,19 @@
 #include "ThreadPool.h"
 #include "../Networking/Clients/DestinationClient.h"
 
-void ThreadPool::threadTask() {
-        std::cout << "In thread" << std::endl;
-        while (!stop) {
-            std::shared_ptr<DestinationClient> client;
+#include "../Utils/Logger.h"
 
+void ThreadPool::threadTask() {
+        while (!stop) {
+           //log("Thread: " <<  << " searching", LoggerLevel::INFO);
+            std::shared_ptr<DestinationClient> client;
             client = destinationClientHandler->getDestinationClientFromQueue();
-            std::cout << "Sending message" << std::endl;
             client->sendMessage();
         }
     }
 
     ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
+        Logger::log("ThreadPool Starting", LoggerLevel::INFO);
         this->destinationClientHandler = destinationClientHandler;
         threadList.reserve(numThreads);
         //TODO since numThreads might be user defined at some point, don't forget to check for error having so many threads
