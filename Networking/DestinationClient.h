@@ -1,15 +1,16 @@
 #pragma once
 
 #include "../CTMP.h"
+#include "Client.h"
 #include <iostream>
 #include <thread>
 
 
 
 
-class DestinationClient {
+class DestinationClient : public Client {
 private:
-    int socketId;
+
     //Queue of Pointers to CTMP Messages
     std::queue<std::shared_ptr<CTMP>> queue;
     //Lock for this class
@@ -17,17 +18,19 @@ private:
 
 
 public:
-    DestinationClient(int socketId);
+
+
+    DestinationClient(int socketId) : Client(socketId){};
 
 
 
     std::shared_ptr<CTMP> accessMessageItem();
 
-    int getSocketId();
+
 
     void sendMessage();
 
-    bool operator==(const DestinationClient& other) const;
+
 
     void addMessageToQueue(std::shared_ptr<CTMP> message);
 

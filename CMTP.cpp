@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "CTMP.h"
 
 /**
@@ -14,7 +16,7 @@ void CTMP::buildHeaderFromBytes(std::vector<uint8_t>& data) {
     //Copys the length and padding into their respective variables
     //Keeps the length in Network byte order;
     memcpy(&header.length, &data[2], sizeof(header.length));
-    memcpy(&header.length, &data[4], sizeof(header.finalPadding));
+    memcpy(&header.finalPadding, &data[4], sizeof(header.finalPadding));
 }
 
 /**
@@ -27,14 +29,15 @@ std::vector<uint8_t> CTMP::convertHeaderToBytes() {
         data[1] = header.initialPadding;
         memcpy(&data[2], &header.length, sizeof(header.length));
         memcpy(&data[4], &header.finalPadding, sizeof(header.finalPadding));
-    }
+        return data;
+}
 //Converts length from Network byte order to system byte order.
 //TODO ask if it is part of standard library
 uint16_t CTMP::getLength() {
         return ntohs(header.length);
     }
 
-void CTMP::validate() {
+    void CTMP::validate() {
         if (header.magicByte != magicByte) {
             //ERROR Handling
         }

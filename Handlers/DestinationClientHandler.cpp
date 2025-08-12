@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <thread>
 #include "../CTMP.h"
-#include "DestinationClient.h"
-#include "DestinationClientHandler.h"
+#include "../Networking/DestinationClient.h"
+#include "../Handlers/DestinationClientHandler.h"
 #include <condition_variable>
 
 
@@ -51,6 +51,8 @@ std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClien
      * Once it gets the lock, it goes to sleep if the thread isn't empty.
      *
      */
+
+    std::cout << "Waiting for message" << std::endl;
     this->conditionVariable.wait(lockQueueSetMap, [this](){ return !this->queue.empty();});
 
     //Getting front element from queue and removing it from set
@@ -95,6 +97,7 @@ void DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
     lock.unlock();
 
     // Adding the message to each destination
+    std::cout << "Adding message" << std::endl;
     for (std::shared_ptr destinationClient : tempDestinationList){
         destinationClient -> addMessageToQueue(message);
     }

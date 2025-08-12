@@ -1,14 +1,13 @@
     #include "DestinationClient.h"
+    #include "Client.h"
 
     #include "../CTMP.h"
     #include <iostream>
     #include <thread>
-#include <sys/socket.h>
+    #include <sys/socket.h>
 
 
-    DestinationClient::DestinationClient(int socketId) {
-        this->socketId = socketId;
-    }
+
 
     /**
      * Once it gets the lock for this class,
@@ -38,6 +37,7 @@
         std::shared_ptr<CTMP> message = accessMessageItem();
         int socketId = getSocketId();
         auto headerBytes = message->convertHeaderToBytes();
+
         size_t totalHeaderSent = 0;
         while (totalHeaderSent < headerBytes.size()) {
             ssize_t sent = send(socketId, headerBytes.data() + totalHeaderSent, headerBytes.size() - totalHeaderSent, 0);
@@ -47,6 +47,7 @@
             }
             totalHeaderSent += sent;
         }
+
 
         size_t totalDataSent = 0;
         auto dataBytes = message->getDataInBytes();
@@ -62,20 +63,7 @@
 
     }
 
-    //Doesn't need to be locked as sockedId is a constant;
-    int DestinationClient::getSocketId() {
-        return this->socketId;
-    }
 
-
-
-
-    //MAY NOT BE NECESSARY AS CONSIDERING USING HASHMAP
-    //Overriding the equals so when we want to check if two clients are equal, we can.
-    //This will allow us to remove it.
-    bool DestinationClient::operator==(const DestinationClient& other) const {
-        return (this->socketId == other.socketId);
-    }
 
 
 

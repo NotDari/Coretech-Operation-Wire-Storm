@@ -1,7 +1,8 @@
 #include "ThreadPool.h"
-#include "../Clients/DestinationClient.h"
+#include "../Networking/DestinationClient.h"
 
-    void ThreadPool::threadTask() {
+void ThreadPool::threadTask() {
+        std::cout << "In thread" << std::endl;
         while (!stop) {
             std::shared_ptr<DestinationClient> client;
 
@@ -16,7 +17,7 @@
         threadList.reserve(numThreads);
         //TODO since numThreads might be user defined at some point, don't forget to check for error having so many threads
         for (uint8_t i = 0; i < numThreads; i++) {
-            threadList.emplace_back([this] {ThreadPool::threadTask();});
+            threadList.emplace_back([this] {this->threadTask();});
         }
 
     }

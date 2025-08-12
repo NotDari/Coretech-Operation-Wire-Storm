@@ -4,17 +4,18 @@
 #include <unistd.h>
 #include <thread>
 #include "CTMP.h"
-#include "Clients/DestinationClientHandler.h"
-#include "Network/ThreadPool.h"
+#include "Handlers/DestinationClientHandler.h"
+#include "Handlers/ThreadPool.h"
 
 using namespace std;
+
 
 
 /**
  * Thread for receiving the source client.
  * Will loop through the messages sent, passing them to the Destination Client Handler.
  */
-void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
+void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
 
     //Creating the server socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,14 +46,17 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
 
 
     //Looping for messages from source client
-    //Needs a lot of work
-    while (true) {
+    while (!(*stop)) {
         //CTMP Wrapper class and buffer
         CTMP ctmp;
         vector<uint8_t> headerBuffer(8);
 
         //Attempt to receive header of CMTP message and add it to the class
         ssize_t headerBytes = recv(clientSocket, headerBuffer.data(), headerBuffer.size(), 0 );
+        if (headerBytes <= 0) {
+            *stop = true;
+            continue;
+        }
         ctmp.buildHeaderFromBytes(headerBuffer);
 
         //Perform header validation
@@ -68,7 +72,7 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
         while (dataReceived < dataLength) {
             ssize_t numberOfBytes = recv(clientSocket, dataBuffer.data() + dataReceived, dataLength - dataReceived, 0);
             if (numberOfBytes <= 0) {
-                //ERROR due to inconmplete data
+                //ERROR due to incomplete data
             }
             dataReceived += numberOfBytes;
         }
@@ -84,6 +88,7 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
         ctmp.assignData(move(dataBuffer));
 
         //MESSAGE is fine- Continue
+        destinationClientHandler->addMessage(std::make_shared<CTMP>(std::move(ctmp)));
 
     }
 
@@ -100,7 +105,7 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
  * At the moment only gets 1 connection, but in future will loop through connections
  * and then send it to the DestinationClientHandler.
  */
-void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
+void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
     //Create destination client and check it connected 
     int destinationSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (destinationSocket < 0) {
@@ -128,7 +133,7 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
     sockaddr_in destinationClientAddress;
     socklen_t dclenIn = sizeof(destinationClientAddress);
 
-    while (true) {
+    while (!(*stop)) {
         //Accept destination client
         int destinationClient = accept(destinationSocket, (struct sockaddr *) &destinationClientAddress, &dclenIn);
         cout << "Destination client found: " << endl;
@@ -145,19 +150,18 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
  * @return (int) - whether or not the program run was successful
  */
 int main() {
+    std::atomic<bool> stop{false};
 
     auto destinationClientHandler = std::make_shared<DestinationClientHandler>();
 
     //Create Client Threads
-    thread receiveDestThread(receiveDestinationClients, destinationClientHandler);
-    thread receiveSourceThread(receiveSourceClients, destinationClientHandler);
+    thread receiveDestThread(receiveDestinationClients, destinationClientHandler, &stop);
+    thread receiveSourceThread(receiveSourceClients, destinationClientHandler, &stop);
 
-    //Join the two threads
-    receiveDestThread.join();
-    receiveSourceThread.join();
 
     ThreadPool threadPool(4, destinationClientHandler);
 
+    //Join the two threads
     receiveDestThread.join();
     receiveSourceThread.join();
 
