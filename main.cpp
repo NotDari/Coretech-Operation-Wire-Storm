@@ -6,6 +6,8 @@
 #include "CTMP.h"
 #include "Handlers/DestinationClientHandler.h"
 #include "Handlers/ThreadPool.h"
+#include "Networking/Server.h"
+#include "Networking/Clients/SourceClient.h"
 
 using namespace std;
 
@@ -16,87 +18,42 @@ using namespace std;
  * Will loop through the messages sent, passing them to the Destination Client Handler.
  */
 void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
-
-    //Creating the server socket
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-
-    //Creating the details for the binding of the server socket
-    sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(33333);
-    serverAddress.sin_addr.s_addr = INADDR_ANY;
-    ::bind(serverSocket, (struct sockaddr *) &serverAddress, sizeof(serverAddress));
-
-
-    //Listening/Waiting for a connection to the server socket
-    listen(serverSocket, 1);
-    cout << "Listening for connection: " << endl;
-
+    Server server(33333);
+    Expected<int> expectedServer = server.initiateProtocol();
+    if (expectedServer.hasError()) {
+        //TODO(Log)
+        *stop = true;
+        return;
+    }
 
     //Accepting a connection to the client socket and assigning it
-    sockaddr_in sourceClientAddress;
-    socklen_t sourceAddressLength = sizeof(sourceClientAddress);
-    int clientSocket = accept(serverSocket, (struct sockaddr *) &sourceClientAddress, &sourceAddressLength);
+    Expected<int> expectedClient = server.initiateClient();
+    if (expectedClient.hasError()) {
+        //TODO(Log)
+        *stop = true;
+        return;
+    }
 
-
-
-
-
-
+    SourceClient sourceClient(expectedClient.getValue(), 8);
 
     //Looping for messages from source client
     while (!(*stop)) {
-        //CTMP Wrapper class and buffer
-        CTMP ctmp;
-        vector<uint8_t> headerBuffer(8);
-
-        //Attempt to receive header of CMTP message and add it to the class
-        ssize_t headerBytes = recv(clientSocket, headerBuffer.data(), headerBuffer.size(), 0 );
-        if (headerBytes <= 0) {
+        Expected<CTMP> expectedCTMP = sourceClient.readMessage();
+        if (expectedCTMP.hasError()) {
+            //TODO(Log)
             *stop = true;
-            continue;
+            break;
         }
-        ctmp.buildHeaderFromBytes(headerBuffer);
-
-        //Perform header validation
-        ctmp.validate();
-
-        uint16_t dataLength = ctmp.getLength();
-
-        //Create buffer for receiving data loop
-        vector<uint8_t> dataBuffer(dataLength);
-        size_t dataReceived = 0;
-
-        //Loop through, getting all the message
-        while (dataReceived < dataLength) {
-            ssize_t numberOfBytes = recv(clientSocket, dataBuffer.data() + dataReceived, dataLength - dataReceived, 0);
-            if (numberOfBytes <= 0) {
-                //ERROR due to incomplete data
-            }
-            dataReceived += numberOfBytes;
-        }
-
-
-        //This is a check to check the length provided in the header bit is correct
-        uint8_t bufferCheck[1];
-        if (recv(clientSocket, bufferCheck, 1, 0 ) != 0) {
-            //ERROR. DROP
-        }
-
-        //Move the data to the ctmp, instead of copying it to be more efficient
-        ctmp.assignData(move(dataBuffer));
-
         //MESSAGE is fine- Continue
-        destinationClientHandler->addMessage(std::make_shared<CTMP>(std::move(ctmp)));
+        destinationClientHandler->addMessage(std::make_shared<CTMP>(std::move(expectedCTMP.getValue())));
 
     }
 
-    close(clientSocket);
+    sourceClient.closeClient();
+    server.stop();
 
 
 
-    close(serverSocket);
 }
 
 
@@ -106,42 +63,27 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
  * and then send it to the DestinationClientHandler.
  */
 void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
-    //Create destination client and check it connected 
-    int destinationSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (destinationSocket < 0) {
-        cout << "Destination socket failed: " << endl;
+
+    Server server(44444);
+    Expected<int> expectedServer = server.initiateProtocol();
+    if (expectedServer.hasError()) {
+        //TODO(Log)
+        *stop = true;
+        return;
     }
 
-    //Create socket binder and attempt bind
-    sockaddr_in destinationAddress;
-    destinationAddress.sin_family = AF_INET;
-    destinationAddress.sin_port = htons(44444);
-    destinationAddress.sin_addr.s_addr = INADDR_ANY;
-    int bindInt = ::bind(destinationSocket, (struct sockaddr *) &destinationAddress, sizeof(destinationAddress));
-    //Check bind successful
-    if (bindInt < 0) {
-        cout << "Bind failed: " << endl;
-    }
-    //Wait for client to attempt to connect
-    int listenInt = listen(destinationSocket, 5);
-    if (listenInt < 0) {
-        cout << "listen failed: " << endl;
-    }
-    cout << "Listening for destination connection: " << endl;
 
-    
-    sockaddr_in destinationClientAddress;
-    socklen_t dclenIn = sizeof(destinationClientAddress);
 
     while (!(*stop)) {
-        //Accept destination client
-        int destinationClient = accept(destinationSocket, (struct sockaddr *) &destinationClientAddress, &dclenIn);
-        cout << "Destination client found: " << endl;
-        destinationClientHandler->addNewDestination(destinationClient);
+        Expected<int> destinationClient = server.initiateClient();
+        if (destinationClient.hasError()) {
+            //TODO(Log)
+            *stop = true;
+            break;
+        }
+        destinationClientHandler->addNewDestination(destinationClient.getValue());
     }
-    
-
-    
+    server.stop();
 }
 
 

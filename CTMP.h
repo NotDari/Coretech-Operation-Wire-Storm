@@ -27,7 +27,7 @@ public:
 
     uint32_t getTotalSize();
 
-    void validate();
+    bool validate();
 
     void assignData(std::vector<uint8_t>&& data);
 

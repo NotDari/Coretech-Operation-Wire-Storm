@@ -48,11 +48,13 @@ Expected<int> Server::initiateProtocol() {
 
     auto expectedBindSocket = bindSocket();
     if (expectedBindSocket.hasError()) {
+        stop();
         return expectedBindSocket;
     }
 
     auto expectedListenSocket = listenOnSocket();
     if (expectedListenSocket.hasError()) {
+        stop();
         return expectedListenSocket;
     }
 
@@ -63,8 +65,18 @@ Expected<int> Server::initiateProtocol() {
 }
 
 Expected<int> Server::initiateClient() {
-
+    if (serverSocket == -1) {
+        return {"Trying to initialise client on closed socket"};
+    }
+    sockaddr_in sourceClientAddress;
+    socklen_t sourceAddressLength = sizeof(sourceClientAddress);
+    int clientSocket = accept(serverSocket, (struct sockaddr *) &sourceClientAddress, &sourceAddressLength);
+    if (clientSocket < 0) {
+        return {"Failed to initialise client: " + std::string(strerror(errno))};
+    }
+    return {clientSocket};
 }
+
 
 
 void Server::stop() {

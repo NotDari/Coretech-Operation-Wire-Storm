@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <thread>
 #include "../CTMP.h"
-#include "../Networking/DestinationClient.h"
+#include "../Networking/Clients/DestinationClient.h"
 #include "../Handlers/DestinationClientHandler.h"
 #include <condition_variable>
 

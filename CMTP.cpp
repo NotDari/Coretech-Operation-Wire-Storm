@@ -37,11 +37,9 @@ uint16_t CTMP::getLength() {
         return ntohs(header.length);
     }
 
-    void CTMP::validate() {
-        if (header.magicByte != magicByte) {
-            //ERROR Handling
-        }
-    }
+bool CTMP::validate() {
+   return (header.magicByte == magicByte);
+}
 
 void CTMP::assignData(std::vector<uint8_t>&& data) {
         this->data = std::move(data);

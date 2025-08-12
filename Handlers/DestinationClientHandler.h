@@ -2,7 +2,7 @@
 
 
 #include <unordered_set>
-#include "../Networking/DestinationClient.h"
+#include "../Networking/Clients/DestinationClient.h"
 
 //TODO Change Singleton Design pattern
 class DestinationClientHandler {

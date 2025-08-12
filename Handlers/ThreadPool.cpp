@@ -1,5 +1,5 @@
 #include "ThreadPool.h"
-#include "../Networking/DestinationClient.h"
+#include "../Networking/Clients/DestinationClient.h"
 
 void ThreadPool::threadTask() {
         std::cout << "In thread" << std::endl;
