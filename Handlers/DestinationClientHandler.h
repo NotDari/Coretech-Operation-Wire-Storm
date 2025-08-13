@@ -3,6 +3,7 @@
 
 #include <unordered_set>
 #include "../Networking/Clients/DestinationClient.h"
+#include "../Utils/Expected.h"
 
 //TODO Change Singleton Design pattern
 class DestinationClientHandler {
@@ -29,16 +30,16 @@ public:
 
     DestinationClientHandler() {}
 
-    void addNewDestination(int socketId);
+    Expected<void> addNewDestination(int socketId);
 
 
     void removeDestination(int socketId);
 
 
 
-    void addMessage(std::shared_ptr<CTMP> message);
+    Expected<void> addMessage(std::shared_ptr<CTMP> message);
 
-    std::shared_ptr<DestinationClient> getDestinationClientFromQueue();
+    Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue();
 
 
 

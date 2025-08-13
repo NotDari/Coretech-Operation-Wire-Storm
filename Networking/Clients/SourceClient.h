@@ -10,8 +10,8 @@ private:
 
     Expected<ssize_t> retrieveNBytes(std::vector<uint8_t>* buffer, ssize_t  bytesRetrievalCount);
 
-    Expected<int> readHeader(CTMP& ctmp);
-    Expected<int> readData(CTMP& ctmp);
+    Expected<void> readHeader(CTMP& ctmp);
+    Expected<void> readData(CTMP& ctmp);
 
 public:
 

@@ -7,8 +7,17 @@ void ThreadPool::threadTask() {
         while (!stop) {
            //log("Thread: " <<  << " searching", LoggerLevel::INFO);
             std::shared_ptr<DestinationClient> client;
-            client = destinationClientHandler->getDestinationClientFromQueue();
-            client->sendMessage();
+            auto expectedDestinationClient = destinationClientHandler->getDestinationClientFromQueue();
+            if (expectedDestinationClient.hasError()) {
+                Logger::log(expectedDestinationClient.getError(), expectedDestinationClient.getLoggerLevel());
+                continue;
+            }
+            client = expectedDestinationClient.getValue();
+            auto expectedSendMessage = client->sendMessage();
+            if (expectedSendMessage.hasError()) {
+                Logger::log(expectedDestinationClient.getError(), expectedDestinationClient.getLoggerLevel());
+            }
+
         }
     }
 

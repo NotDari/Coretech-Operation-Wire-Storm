@@ -6,6 +6,8 @@
 #include "../CTMP.h"
 #include "../Networking/Clients/DestinationClient.h"
 #include "../Handlers/DestinationClientHandler.h"
+#include "../Utils/Expected.h"
+#include "../Utils/Logger.h"
 #include <condition_variable>
 
 
@@ -15,10 +17,15 @@
 
 //Called when a new destination client is added.
 //Adds it to the hashmap
-void DestinationClientHandler::addNewDestination(int socketId) {
+Expected<void> DestinationClientHandler::addNewDestination(int socketId) {
     std::lock_guard<std::mutex> lock(destinationMapMutex);
-    std::shared_ptr<DestinationClient> destinationClientPtr = std::make_shared<DestinationClient>(socketId);
-    destinationMap.insert({socketId,destinationClientPtr});
+    try {
+        std::shared_ptr<DestinationClient> destinationClientPtr = std::make_shared<DestinationClient>(socketId);
+        destinationMap.insert({socketId,destinationClientPtr});
+    } catch (std::exception& e) {
+        return {"Failed to add new destination: " + std::string(e.what()), LoggerLevel::ERROR, ErrorCode::Default};
+    }
+    return {};
 }
 
 
@@ -39,7 +46,7 @@ void DestinationClientHandler::removeDestination(int socketId) {
  *
  * @return the destination client which is at the front of the queue.
  */
-std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClientFromQueue() {
+Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue() {
     std::unique_lock lockQueueSetMap(queueSetMutex);
     /**
      * LONG MESSAGE TO REMEMBER LOGIC BEHIND CONDITION VARIABLES
@@ -54,6 +61,9 @@ std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClien
 
     this->conditionVariable.wait(lockQueueSetMap, [this](){ return !this->queue.empty();});
 
+    if (queue.empty()) {
+        return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::Default};
+    }
     //Getting front element from queue and removing it from set
     int destinationClientId = queue.front();
     queue.pop_front();
@@ -64,7 +74,10 @@ std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClien
     std::lock_guard lockDestinationMap(destinationMapMutex);
     auto mapElement = destinationMap.find(destinationClientId);
     if (mapElement == destinationMap.end()) {
-        //ERROR, Index doesn't exist;
+        return {"Queue Destination doesn't exist anymore", LoggerLevel::WARN, ErrorCode::Default};
+    }
+    if (!mapElement->second) {
+        return {"Queue Destination is null", LoggerLevel::ERROR, ErrorCode::Default};
     }
 
     return mapElement->second;
@@ -83,13 +96,21 @@ std::shared_ptr<DestinationClient> DestinationClientHandler::getDestinationClien
  * TODO could it be faster to hold a temporary queue of destination clients pointers??
  * @param message (shared_ptr<CTMP>) Message to be sent to all the clients.
  */
-void DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
+Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
+    if (!message) {
+        return {"Message to be added is null", LoggerLevel::ERROR, ErrorCode::Default};
+    }
     //Making temp list of Destination clients to be copied into
     std::vector<std::shared_ptr<DestinationClient>> tempDestinationList;
-    tempDestinationList.reserve(destinationMap.size());
 
     //Getting all destinations in a thread safe way then releasing the lock
     std::unique_lock lock(destinationMapMutex);
+
+    if (destinationMap.empty()) {
+        return {"No messages to add to", LoggerLevel::WARN, ErrorCode::Default};
+    }
+
+    tempDestinationList.reserve(destinationMap.size());
     for (auto& entry : destinationMap) {
         tempDestinationList.push_back(entry.second);
     }
@@ -111,6 +132,7 @@ void DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
     }
     //Waking all threads up
     conditionVariable.notify_all();
+    return {};
 }
 
 

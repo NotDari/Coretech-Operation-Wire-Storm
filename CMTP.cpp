@@ -42,8 +42,8 @@ bool CTMP::validate() {
 }
 
 void CTMP::assignData(std::vector<uint8_t>&& data) {
-        this->data = std::move(data);
-    }
+    this->data = std::move(data);
+}
 
 uint32_t CTMP::getTotalSize() {
     return getLength() + this->HEADER_SIZE;

@@ -2,6 +2,7 @@
 
 #include "../../CTMP.h"
 #include "Client.h"
+#include "../../Utils/Expected.h"
 #include <iostream>
 #include <thread>
 
@@ -24,11 +25,11 @@ public:
 
 
 
-    std::shared_ptr<CTMP> accessMessageItem();
+    Expected<std::shared_ptr<CTMP>> accessMessageItem();
 
 
 
-    void sendMessage();
+    Expected<void> sendMessage();
 
 
 
