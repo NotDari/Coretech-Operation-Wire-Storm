@@ -30,9 +30,15 @@ Expected<void> DestinationClientHandler::addNewDestination(int socketId) {
 
 
 //Removes a destination client from the hashmap
-void DestinationClientHandler::removeDestination(int socketId) {
-    std::lock_guard<std::mutex> lock(destinationMapMutex);
-    destinationMap.erase(socketId);
+Expected<void> DestinationClientHandler::removeDestination(int socketId) {
+    try {
+        std::lock_guard<std::mutex> lock(destinationMapMutex);
+        destinationMap.erase(socketId);
+    } catch (...){
+        return {"Failed to remove Broken Destination", LoggerLevel::ERROR, ErrorCode::Default};
+    }
+
+    return {};
 }
 
 
@@ -59,8 +65,7 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
      *
      */
 
-    this->conditionVariable.wait(lockQueueSetMap, [this](){ return !this->queue.empty();});
-
+    this->conditionVariable.wait(lockQueueSetMap, [this](){ return !queue.empty();});
     if (queue.empty()) {
         return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::Default};
     }
@@ -135,6 +140,14 @@ Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> messag
     return {};
 }
 
+
+Expected<void> DestinationClientHandler::notifyAll() {
+    try {
+        this->conditionVariable.notify_all();
+    } catch (...) {
+        return {"Failed to notify All", LoggerLevel::ERROR, ErrorCode::Default};
+    }
+}
 
 
 

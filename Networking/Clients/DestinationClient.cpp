@@ -43,6 +43,7 @@
         if (expectedMessage.hasError()) {
             return {expectedMessage.getError(), expectedMessage.getLoggerLevel(), expectedMessage.getErrorCode()};
         }
+
         int socketId = getSocketId();
         auto headerBytes = expectedMessage.getValue()->convertHeaderToBytes();
         auto dataBytes = expectedMessage.getValue()->getDataInBytes();
@@ -58,7 +59,11 @@
         while (totalDataSent < entireMessage.size()) {
             ssize_t sent = send(socketId, entireMessage.data() + totalDataSent, entireMessage.size() - totalDataSent, MSG_NOSIGNAL);
             if (sent < 0) {
-                return {"Error sending data:" + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::Default};
+                if (errno == EPIPE){
+                    return {"Connection closed, broken pipe", LoggerLevel::WARN, ErrorCode::BrokenPipe};
+                } else {
+                    return {"Error sending data:" + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::Default};
+                }
             }
             if (sent == 0) {
                 return {"Connection Closed during data send", LoggerLevel::WARN, ErrorCode::ConnectionClosed};

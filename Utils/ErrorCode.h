@@ -6,5 +6,7 @@
 
 enum ErrorCode {
     Default,
-    ConnectionClosed
+    ConnectionClosed,
+    BrokenPipe,
+    STOPTHREAD
 };

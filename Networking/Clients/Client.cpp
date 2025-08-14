@@ -4,6 +4,7 @@
 
 #include "Client.h"
 #include <string>
+#include "../../Utils/Logger.h"
 
 
 

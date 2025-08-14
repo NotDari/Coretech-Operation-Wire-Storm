@@ -54,16 +54,15 @@ Expected<void> SourceClient::readData(CTMP& ctmp) {
     //Create buffer for receiving data loop
     std::vector<uint8_t> dataBuffer(dataLength);
 
-
     auto expectedData = retrieveNBytes(&dataBuffer, dataLength);
     if (expectedData.hasError()) {
         return {expectedData.getError(), expectedData.getLoggerLevel(), expectedData.getErrorCode()};
     }
 
-
     //This is a check to check the length provided in the header bit is correct
     uint8_t bufferCheck[1];
-    if (recv(getSocketId(), bufferCheck, 1, 0 ) < 0) {
+    int extraData = recv(getSocketId(), bufferCheck, 1, MSG_PEEK | MSG_DONTWAIT);
+    if (extraData > 0) {
         return {"Data was too long for length provided", LoggerLevel::WARN, ErrorCode::Default};
     }
 

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "CTMP.h"
+#include "Utils/Expected.h"
 
 /**
     * Converts the data from a byte array into the class's header struct.

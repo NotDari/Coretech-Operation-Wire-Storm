@@ -15,7 +15,17 @@ void ThreadPool::threadTask() {
             client = expectedDestinationClient.getValue();
             auto expectedSendMessage = client->sendMessage();
             if (expectedSendMessage.hasError()) {
-                Logger::log(expectedDestinationClient.getError(), expectedDestinationClient.getLoggerLevel());
+                if (expectedSendMessage.getErrorCode() == ErrorCode::BrokenPipe) {
+                    auto expectedRemoveDestination = destinationClientHandler->removeDestination(expectedDestinationClient.getValue()->getSocketId());
+                    if (expectedRemoveDestination.hasError()) {
+                        Logger::log(expectedRemoveDestination.getError(), expectedRemoveDestination.getLoggerLevel());
+                    } else {
+                        Logger::log("Successfully removed closed destination", LoggerLevel::INFO);
+                    }
+                }else {
+                    Logger::log(expectedSendMessage.getError(), expectedSendMessage.getLoggerLevel());
+                }
+
             }
 
         }

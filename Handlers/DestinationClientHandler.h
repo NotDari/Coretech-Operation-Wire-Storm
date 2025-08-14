@@ -5,7 +5,6 @@
 #include "../Networking/Clients/DestinationClient.h"
 #include "../Utils/Expected.h"
 
-//TODO Change Singleton Design pattern
 class DestinationClientHandler {
 private:
     // The list of all the Destination Clients. Uses a pointer
@@ -33,11 +32,13 @@ public:
     Expected<void> addNewDestination(int socketId);
 
 
-    void removeDestination(int socketId);
+    Expected<void> removeDestination(int socketId);
 
 
 
     Expected<void> addMessage(std::shared_ptr<CTMP> message);
+
+    Expected<void> notifyAll();
 
     Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue();
 

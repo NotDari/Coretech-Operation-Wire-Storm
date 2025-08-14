@@ -20,8 +20,11 @@ class Logger {
 private:
     static std::mutex logMutex;  // Declare mutex
 
+
 public:
-   static std::string convertLoggerLevelString(LoggerLevel level);
+
+
+    static std::string convertLoggerLevelString(LoggerLevel level);
 
     static void log(std::string message, LoggerLevel level);
 

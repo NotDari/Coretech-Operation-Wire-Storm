@@ -38,7 +38,7 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
         }
 
         SourceClient sourceClient(expectedClient.getValue(), 8);
-        Logger::log("Connect to Source Client", LoggerLevel::INFO);
+        Logger::log("Connected to Source Client", LoggerLevel::INFO);
 
         //Looping for messages from source client
         while (!(*stop)) {
@@ -88,15 +88,15 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
  */
 void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
     Logger::log("Destination Client Thread Starting", LoggerLevel::INFO);
-    Server server(44444, 5);
+    Server server(44444, 50);
     Expected<int> expectedServer = server.initiateProtocol();
     if (expectedServer.hasError()) {
         Logger::log(expectedServer.getError(), expectedServer.getLoggerLevel());
         *stop = true;
         return;
     }
-    Logger::log("Destination client server created successfully", LoggerLevel::INFO);
 
+    Logger::log("Destination client server created successfully", LoggerLevel::INFO);
     while (!(*stop)) {
         Expected<int> destinationClient = server.initiateClient();
         if (destinationClient.hasError()) {
@@ -104,6 +104,7 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
             *stop = true;
             break;
         }
+
         Logger::log("Attempting to add new destination", LoggerLevel::INFO);
         auto expectedAddDestination = destinationClientHandler->addNewDestination(destinationClient.getValue());
         if (expectedAddDestination.hasError()) {

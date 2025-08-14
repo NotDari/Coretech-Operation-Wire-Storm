@@ -5,6 +5,8 @@
 
 std::mutex Logger::logMutex;
 
+
+
 std::string Logger::convertLoggerLevelString(LoggerLevel level){
     switch (level) {
         case LoggerLevel::INFO:
