@@ -52,7 +52,7 @@ Expected<void> DestinationClientHandler::removeDestination(int socketId) {
  *
  * @return the destination client which is at the front of the queue.
  */
-Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue() {
+Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue(std::atomic<bool>* stop) {
     std::unique_lock lockQueueSetMap(queueSetMutex);
     /**
      * LONG MESSAGE TO REMEMBER LOGIC BEHIND CONDITION VARIABLES
@@ -65,7 +65,10 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
      *
      */
 
-    this->conditionVariable.wait(lockQueueSetMap, [this](){ return !queue.empty();});
+    this->conditionVariable.wait(lockQueueSetMap, [this, stop](){ return !queue.empty() || *stop;});
+    if (*stop) {
+        return {"ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOPTHREAD};
+    }
     if (queue.empty()) {
         return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::Default};
     }

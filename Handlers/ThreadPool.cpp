@@ -4,10 +4,10 @@
 #include "../Utils/Logger.h"
 
 void ThreadPool::threadTask() {
-        while (!stop) {
+        while (!*stop) {
            //log("Thread: " <<  << " searching", LoggerLevel::INFO);
             std::shared_ptr<DestinationClient> client;
-            auto expectedDestinationClient = destinationClientHandler->getDestinationClientFromQueue();
+            auto expectedDestinationClient = destinationClientHandler->getDestinationClientFromQueue(stop);
             if (expectedDestinationClient.hasError()) {
                 Logger::log(expectedDestinationClient.getError(), expectedDestinationClient.getLoggerLevel());
                 continue;
@@ -27,17 +27,22 @@ void ThreadPool::threadTask() {
                 }
 
             }
-
         }
+        Logger::log("Thread done!" , LoggerLevel::DEBUG);
     }
 
-    ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler) {
+    ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
         Logger::log("ThreadPool Starting", LoggerLevel::INFO);
         this->destinationClientHandler = destinationClientHandler;
         threadList.reserve(numThreads);
-        //TODO since numThreads might be user defined at some point, don't forget to check for error having so many threads
+        this->stop = stop;
         for (uint8_t i = 0; i < numThreads; i++) {
             threadList.emplace_back([this] {this->threadTask();});
         }
 
     }
+ThreadPool::~ThreadPool() {
+    for (auto &t : threadList) {
+        if (t.joinable()) t.join();
+    }
+}

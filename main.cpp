@@ -28,22 +28,58 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
         *stop = true;
         return;
     }
+    std::shared_ptr<SourceClient> sourceClient;
     while (!(*stop)){
-        Logger::log("Searching for source client", LoggerLevel::INFO);
-        //Accepting a connection to the client socket and assigning it
-        Expected<int> expectedClient = server.initiateClient();
-        if (expectedClient.hasError()) {
-            Logger::log(expectedClient.getError(), expectedClient.getLoggerLevel());
+        Logger::log("Searching for source client connection/message", LoggerLevel::DEBUG);
+
+
+        //Preparing the file descriptor of the socket to check and the id
+        fd_set socketFD;
+        FD_ZERO(&socketFD);
+        int socketFDToCheck;
+
+        // Checking if source client is active, if not, going to add a new one
+        if (!sourceClient) {
+            socketFDToCheck = expectedServer.getValue();
+            FD_SET(socketFDToCheck, &socketFD);
+        }
+        //Else we're going to be searching on the client socket for messages.
+        else {
+            socketFDToCheck = sourceClient->getSocketId();
+            FD_SET(socketFDToCheck, &socketFD);
+        }
+
+        //Time to set the select check for
+        timeval waitTime;
+        waitTime.tv_sec = 1;
+        waitTime.tv_usec = 0;
+
+        int connectionAttempt = select(socketFDToCheck + 1, &socketFD, nullptr, nullptr, &waitTime);
+
+        if (connectionAttempt < 0) {
+            Logger::log("Error with sourceClient connection ", LoggerLevel::ERROR);
             *stop = true;
+            break;
+        }
+        if (connectionAttempt == 0) {
+            //No connection. Trying again, and checking if stop has been called
+            Logger::log("No connection, trying again", LoggerLevel::DEBUG);
             continue;
         }
 
-        SourceClient sourceClient(expectedClient.getValue(), 8);
-        Logger::log("Connected to Source Client", LoggerLevel::INFO);
+        if (!sourceClient) {
+            //Accepting a connection to the client socket and assigning it
+            Expected<int> expectedClient = server.initiateClient();
+            if (expectedClient.hasError()) {
+                Logger::log(expectedClient.getError(), expectedClient.getLoggerLevel());
+                *stop = true;
+                continue;
+            }
 
-        //Looping for messages from source client
-        while (!(*stop)) {
-            Expected<CTMP> expectedCTMP = sourceClient.readMessage();
+            sourceClient = make_shared<SourceClient>(expectedClient.getValue(), 8);
+            Logger::log("Connected to Source Client", LoggerLevel::INFO);
+        } else {
+            Expected<CTMP> expectedCTMP = sourceClient->readMessage();
             Logger::log("Started reading message", LoggerLevel::INFO);
             if (expectedCTMP.hasError()) {
                 LoggerLevel level = expectedCTMP.getLoggerLevel();
@@ -53,7 +89,8 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
                     break;
                 }
                 if (expectedCTMP.getErrorCode() == ErrorCode::ConnectionClosed) {
-                    break;
+                    sourceClient.reset();
+                    Logger::log("Client disconnected", LoggerLevel::INFO);
                 }
                 continue;
 
@@ -66,19 +103,21 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
             if (expectedSendMessageAttempt.hasError()) {
                 Logger::log(expectedSendMessageAttempt.getError(), expectedSendMessageAttempt.getLoggerLevel());
             }
-            break;
 
         }
-        Logger::log("Source Client Thread Closing", LoggerLevel::INFO);
-        sourceClient.closeClient();
 
+
+
+
+    }
+    Logger::log("Source Client Thread Closing", LoggerLevel::INFO);
+    if (sourceClient){
+        sourceClient->closeClient();
     }
 
 
+
     server.stop();
-
-
-
 }
 
 
@@ -98,7 +137,32 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
     }
 
     Logger::log("Destination client server created successfully", LoggerLevel::INFO);
+
+
+
     while (!(*stop)) {
+
+        fd_set socketFD;
+        FD_ZERO(&socketFD);
+        FD_SET(expectedServer.getValue(), &socketFD);
+
+        timeval waitTime;
+        waitTime.tv_sec = 1;
+        waitTime.tv_usec = 0;
+
+        int connectionAttempt = select(expectedServer.getValue() + 1, &socketFD, nullptr, nullptr, &waitTime);
+
+        if (connectionAttempt < 0) {
+            Logger::log("Error with sourceClient connection ", LoggerLevel::ERROR);
+            *stop = true;
+            break;
+        }
+        if (connectionAttempt == 0) {
+            //No connection. Trying again, and checking if stop has been called
+            Logger::log("No connection, trying again", LoggerLevel::DEBUG);
+            continue;
+        }
+
         Expected<int> destinationClient = server.initiateClient();
         if (destinationClient.hasError()) {
             Logger::log(destinationClient.getError(), destinationClient.getLoggerLevel());
@@ -114,6 +178,7 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
             Logger::log("Successfully added new destination", LoggerLevel::INFO);
         }
     }
+    destinationClientHandler->notifyAll();
     Logger::log("Destination client thread closing", LoggerLevel::INFO);
     server.stop();
 
@@ -173,7 +238,6 @@ DefaultConfig getCommandLineFlags(int argc, char* argv[]) {
 }
 
 void handleShutdown(int signal) {
-    Logger::log("Requested Shutdown", LoggerLevel::DEBUG);
     stop = true;
 }
 
@@ -197,7 +261,7 @@ int main(int argc, char* argv[]) {
     thread receiveSourceThread(receiveSourceClients, destinationClientHandler, &stop, config);
 
 
-    ThreadPool threadPool(config.threadCount, destinationClientHandler);
+    ThreadPool threadPool(config.threadCount, destinationClientHandler, &stop);
 
     //Join the two threads
     receiveDestThread.join();

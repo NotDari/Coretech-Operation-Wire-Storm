@@ -19,11 +19,6 @@ int Client::getSocketId() {
 }
 
 
-int createSocket() {
-
-}
-
-
 void Client::closeClient() {
     if (socketId != -1) {
         close(socketId);

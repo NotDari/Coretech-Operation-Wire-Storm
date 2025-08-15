@@ -40,7 +40,7 @@ public:
 
     Expected<void> notifyAll();
 
-    Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue();
+    Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue(std::atomic<bool>* stop);
 
 
 
