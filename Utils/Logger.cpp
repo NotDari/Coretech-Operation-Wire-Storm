@@ -4,7 +4,7 @@
 #include "Logger.h"
 
 std::mutex Logger::logMutex;
-
+bool Logger::includeDebug = false;
 
 
 std::string Logger::convertLoggerLevelString(LoggerLevel level){
@@ -21,6 +21,9 @@ std::string Logger::convertLoggerLevelString(LoggerLevel level){
 
 
 void Logger::log(std::string message, LoggerLevel level){
+    if (!includeDebug && level == LoggerLevel::DEBUG) {
+        return;
+    }
     std::lock_guard<std::mutex> guard(logMutex);
     auto time = std::chrono::system_clock::now();
     std::cout << "[" << convertLoggerLevelString(level) << "] " << time << " : " << message << std::endl;

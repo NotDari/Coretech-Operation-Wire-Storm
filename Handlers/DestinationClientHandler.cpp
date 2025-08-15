@@ -144,6 +144,7 @@ Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> messag
 Expected<void> DestinationClientHandler::notifyAll() {
     try {
         this->conditionVariable.notify_all();
+        return {};
     } catch (...) {
         return {"Failed to notify All", LoggerLevel::ERROR, ErrorCode::Default};
     }

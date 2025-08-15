@@ -21,8 +21,10 @@ private:
     static std::mutex logMutex;  // Declare mutex
 
 
+
 public:
 
+    static bool includeDebug;
 
     static std::string convertLoggerLevelString(LoggerLevel level);
 

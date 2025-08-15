@@ -8,9 +8,9 @@
     * Keeps length in Network Byte order.
     * @param data header in bytes form
 */
-void CTMP::buildHeaderFromBytes(std::vector<uint8_t>& data) {
+Expected<void> CTMP::buildHeaderFromBytes(std::vector<uint8_t>& data) {
     if (data.size() != this->HEADER_SIZE) {
-        // ERROR
+        return {"Header length is incorrect", LoggerLevel::ERROR, ErrorCode::Default};
     }
     header.magicByte = data[0];
     header.initialPadding = data[1];
@@ -18,6 +18,7 @@ void CTMP::buildHeaderFromBytes(std::vector<uint8_t>& data) {
     //Keeps the length in Network byte order;
     memcpy(&header.length, &data[2], sizeof(header.length));
     memcpy(&header.finalPadding, &data[4], sizeof(header.finalPadding));
+    return {};
 }
 
 /**

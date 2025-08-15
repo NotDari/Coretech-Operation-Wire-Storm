@@ -67,7 +67,7 @@ Expected<void> SourceClient::readData(CTMP& ctmp) {
     }
 
     //Move the data to the ctmp, instead of copying it to be more efficient
-    ctmp.assignData(move(dataBuffer));
+    ctmp.assignData(std::move(dataBuffer));
 
     //MESSAGE is fine- Continue
     return{};

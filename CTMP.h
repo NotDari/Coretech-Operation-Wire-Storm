@@ -24,7 +24,7 @@ private:
     std::vector<uint8_t> data;
 public:
     //Converts header from bytes and populates the header struct instance
-    void buildHeaderFromBytes(std::vector<uint8_t>& data);
+    Expected<void> buildHeaderFromBytes(std::vector<uint8_t>& data);
 
     //Converts this class' header instance back into bytes
     std::vector<uint8_t> convertHeaderToBytes();

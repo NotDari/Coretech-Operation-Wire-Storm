@@ -1,14 +1,15 @@
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
+
 #include <thread>
 #include "CTMP.h"
 #include "Handlers/DestinationClientHandler.h"
 #include "Handlers/ThreadPool.h"
 #include "Networking/Server.h"
 #include "Networking/Clients/SourceClient.h"
+#include "Utils/DefaultConfig.h"
 #include "Utils/Logger.h"
+#include <csignal>
+
+std::atomic<bool> stop{false};
 
 using namespace std;
 
@@ -18,9 +19,9 @@ using namespace std;
  * Thread for receiving the source client.
  * Will loop through the messages sent, passing them to the Destination Client Handler.
  */
-void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
+void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop, DefaultConfig config) {
     Logger::log("Source Client Thread Starting", LoggerLevel::INFO);
-    Server server(33333, 1);
+    Server server(config.sourcePort, 1);
     Expected<int> expectedServer = server.initiateProtocol();
     if (expectedServer.hasError()) {
         Logger::log(expectedServer.getError(), expectedServer.getLoggerLevel());
@@ -86,9 +87,9 @@ void receiveSourceClients(std::shared_ptr<DestinationClientHandler> destinationC
  * At the moment only gets 1 connection, but in future will loop through connections
  * and then send it to the DestinationClientHandler.
  */
-void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
+void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop, DefaultConfig config) {
     Logger::log("Destination Client Thread Starting", LoggerLevel::INFO);
-    Server server(44444, 50);
+    Server server(config.destPort, config.maxClientQueue);
     Expected<int> expectedServer = server.initiateProtocol();
     if (expectedServer.hasError()) {
         Logger::log(expectedServer.getError(), expectedServer.getLoggerLevel());
@@ -120,25 +121,88 @@ void receiveDestinationClients(std::shared_ptr<DestinationClientHandler> destina
 
 
 /**
+ * 
+ * @param argc
+ * @param argv 
+ * @return 
+ */
+DefaultConfig getCommandLineFlags(int argc, char* argv[]) {
+    DefaultConfig config;
+    for (int i = 1; i < argc; ++i) {
+        std::string flag = argv[i];
+
+        if (flag == "-sp" && i + 1 < argc) {
+            try {
+                config.sourcePort = static_cast<uint16_t>(std::stoi(argv[++i]));
+                Logger::log("Set source port: " + std::to_string(config.sourcePort), LoggerLevel::INFO);
+            } catch (...) {
+                Logger::log("Invalid flag argument", LoggerLevel::WARN);
+            }
+        } else if (flag == "-dp" && i + 1 < argc) {
+            try {
+                config.destPort = static_cast<uint16_t>(std::stoi(argv[++i]));
+                Logger::log("Set destination port: " + std::to_string(config.destPort), LoggerLevel::INFO);
+            } catch (...) {
+                Logger::log("Invalid flag argument", LoggerLevel::WARN);
+            }
+        } else if (flag == "-mc" && i + 1 < argc) {
+            try {
+                config.maxClientQueue = std::stoi(argv[++i]);
+                Logger::log("Set max client queue: " + std::to_string(config.maxClientQueue), LoggerLevel::INFO);
+            } catch (...) {
+                Logger::log("Invalid flag argument", LoggerLevel::WARN);
+            }
+        } else if (flag == "-tc" && i + 1 < argc) {
+            try {
+                config.threadCount = std::stoi(argv[++i]);
+                Logger::log("Set thread count: " + std::to_string(config.threadCount), LoggerLevel::INFO);
+
+            } catch (...) {
+                Logger::log("Invalid flag argument", LoggerLevel::WARN);
+            }
+        } else if (flag == "-db" ) {
+            Logger::includeDebug = true;
+            Logger::log("Debug mode enabled", LoggerLevel::INFO);
+        }
+        else {
+            Logger::log("Invalid Flag:" + flag, LoggerLevel::WARN);
+        }
+    }
+
+    return config;
+}
+
+void handleShutdown(int signal) {
+    Logger::log("Requested Shutdown", LoggerLevel::DEBUG);
+    stop = true;
+}
+
+/**
  * The main loop which creates both threads.
  * @return (int) - whether or not the program run was successful
  */
-int main() {
+int main(int argc, char* argv[]) {
     Logger::log("Starting application", LoggerLevel::INFO);
-    std::atomic<bool> stop{false};
+    DefaultConfig config = getCommandLineFlags(argc, argv);
+
+    //Handle stopping process.
+    signal(SIGINT, handleShutdown);
+    //Handle stopping process. CLION uses SIGTERM
+    signal(SIGTERM, handleShutdown);
 
     auto destinationClientHandler = std::make_shared<DestinationClientHandler>();
 
     //Create Client Threads
-    thread receiveDestThread(receiveDestinationClients, destinationClientHandler, &stop);
-    thread receiveSourceThread(receiveSourceClients, destinationClientHandler, &stop);
+    thread receiveDestThread(receiveDestinationClients, destinationClientHandler, &stop, config);
+    thread receiveSourceThread(receiveSourceClients, destinationClientHandler, &stop, config);
 
 
-    ThreadPool threadPool(4, destinationClientHandler);
+    ThreadPool threadPool(config.threadCount, destinationClientHandler);
 
     //Join the two threads
     receiveDestThread.join();
     receiveSourceThread.join();
+
 
     return 0;
 }
