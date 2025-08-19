@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <cstring>
+#include <cerrno>
 
 
 /**
@@ -21,7 +23,7 @@ Server::~Server() {
 Expected<int> Server::createSocket() {
     int socketAssignment = socket(AF_INET, SOCK_STREAM, 0);
     if (socketAssignment == -1) {
-        return { std::string("Issues Creating socket: ") + strerror(errno), LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<int>( std::string("Issues Creating socket: ") + strerror(errno), LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     return {socketAssignment};
 }
@@ -42,7 +44,7 @@ Expected<void> Server::bindSocket() {
 
     int bindOutcome = bind(serverSocket, (struct sockaddr *) &serverAddress, sizeof(serverAddress));
     if (bindOutcome < 0) {
-        return {"Failed to bind Socket on port:" + std::to_string(this->portNumber) + " ,with err:" + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT};
+        return Expected<void>("Failed to bind Socket on port:" + std::to_string(this->portNumber) + " ,with err:" + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT);
     }
     return {};
 };
@@ -55,7 +57,7 @@ Expected<void> Server::bindSocket() {
  */
 Expected<void> Server::listenOnSocket() {
     if (listen(serverSocket, listenNumber) < 0) {
-        return {"Failed to listen on socket: " + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::DEFAULT };
+        return Expected<void>("Failed to listen on socket: " + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::DEFAULT );
     }
     return {};
 };
@@ -80,14 +82,14 @@ Expected<int> Server::initiateProtocol() {
     auto expectedBindSocket = bindSocket();
     if (expectedBindSocket.hasError()) {
         stop();
-        return {expectedBindSocket.getError(), expectedBindSocket.getLoggerLevel(), expectedBindSocket.getErrorCode()};
+        return Expected<int>(expectedBindSocket.getError(), expectedBindSocket.getLoggerLevel(), expectedBindSocket.getErrorCode());
     }
 
     //Listening to the Socket
     auto expectedListenSocket = listenOnSocket();
     if (expectedListenSocket.hasError()) {
         stop();
-        return {expectedListenSocket.getError(), expectedListenSocket.getLoggerLevel(), expectedListenSocket.getErrorCode()};
+        return Expected<int>(expectedListenSocket.getError(), expectedListenSocket.getLoggerLevel(), expectedListenSocket.getErrorCode());
     }
 
     return expectedSocket.getValue();
@@ -105,14 +107,14 @@ Expected<int> Server::initiateProtocol() {
  */
 Expected<int> Server::initiateClient() {
     if (serverSocket == -1) {
-        return {"Trying to initialise client on closed socket", LoggerLevel::ERROR, ErrorCode::DEFAULT };
+        return Expected<int>("Trying to initialise client on closed socket", LoggerLevel::ERROR, ErrorCode::DEFAULT );
     }
     //Waiting for a client to request connection so they can be accepted
     sockaddr_in ClientAddress;
     socklen_t sourceAddressLength = sizeof(ClientAddress);
     int clientSocket = accept(serverSocket, (struct sockaddr *) &ClientAddress, &sourceAddressLength);
     if (clientSocket < 0) {
-        return {"Failed to initialise client: " + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT};
+        return Expected<int>("Failed to initialise client: " + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT);
     }
     Logger::log("Accepted Client", LoggerLevel::INFO);
     return {clientSocket};

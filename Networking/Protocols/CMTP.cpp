@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <cstring>
 #include "CTMP.h"
 #include "../../Utils/Expected.h"
 
@@ -10,7 +11,7 @@
 */
 Expected<void> CTMP::buildHeaderFromBytes(std::vector<uint8_t>& data) {
     if (data.size() != this->HEADER_SIZE) {
-        return {"Header length is incorrect", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Header length is incorrect", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     header.magicByte = data[0];
     header.initialPadding = data[1];

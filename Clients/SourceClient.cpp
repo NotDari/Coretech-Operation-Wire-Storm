@@ -104,14 +104,14 @@ Expected<CTMP> SourceClient::readMessage() {
     //Get header
     Expected<void> expectedHeader = readHeader(ctmp);
     if (expectedHeader.hasError()) {
-        return {expectedHeader.getError(), expectedHeader.getLoggerLevel(), expectedHeader.getErrorCode()};
+        return Expected<CTMP>(expectedHeader.getError(), expectedHeader.getLoggerLevel(), expectedHeader.getErrorCode());
     }
 
     //Get Data
     Expected<void> expectedData = readData(ctmp);
     if (expectedData.hasError()) {
-        return {expectedData.getError(), expectedData.getLoggerLevel(), expectedData.getErrorCode()};
+        return Expected<CTMP>(expectedData.getError(), expectedData.getLoggerLevel(), expectedData.getErrorCode());
     }
 
-    return {std::move(ctmp)};
+    return Expected<CTMP>(std::move(ctmp));
 }

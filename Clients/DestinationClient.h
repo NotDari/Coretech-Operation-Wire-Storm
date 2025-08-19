@@ -4,6 +4,7 @@
 #include "Client.h"
 #include "../Utils/Expected.h"
 #include <thread>
+#include <queue>
 
 
 /**

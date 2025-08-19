@@ -29,11 +29,11 @@ Expected<void> ClientReceiver::selectSocketTimeout(int socketId, int timeoutSeco
     int result = select(socketId + 1, &socketFD, nullptr, nullptr, &waitTime);
     //Error with select, return an error
     if (result < 0) {
-        return {"Error with select" , LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Error with select" , LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     //Nothing connected in time, not an actual error, so return a log and a NoConnectionAttempt
     if (result == 0){
-        return {"No connection, trying again", LoggerLevel::DEBUG, ErrorCode::NO_CONNECTION_ATTEMPT};
+        return Expected<void>("No connection, trying again", LoggerLevel::DEBUG, ErrorCode::NO_CONNECTION_ATTEMPT);
     }
     return {};
 }

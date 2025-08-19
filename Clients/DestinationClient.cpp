@@ -4,6 +4,7 @@
 #include "../Networking/Protocols/CTMP.h"
 #include <thread>
 #include <sys/socket.h>
+#include <cstring>
 
 
 
@@ -18,7 +19,7 @@ Expected<std::shared_ptr<CTMP>> DestinationClient::accessMessageItem() {
     std::shared_ptr<CTMP> message = queue.front();
     queue.pop();
     if (!message) {
-        return {"Message is null", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<std::shared_ptr<CTMP>>("Message is null", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     return message;
 }
@@ -49,7 +50,7 @@ Expected<void> DestinationClient::sendMessage() {
     //Get the next message to be processed
     auto expectedMessage = accessMessageItem();
     if (expectedMessage.hasError()) {
-        return {expectedMessage.getError(), expectedMessage.getLoggerLevel(), expectedMessage.getErrorCode()};
+        return Expected<void>(expectedMessage.getError(), expectedMessage.getLoggerLevel(), expectedMessage.getErrorCode());
     }
 
     //Get the next message data
@@ -69,13 +70,13 @@ Expected<void> DestinationClient::sendMessage() {
         ssize_t sent = send(socketId, entireMessage.data() + totalDataSent, entireMessage.size() - totalDataSent, MSG_NOSIGNAL);
         if (sent < 0) {
             if (errno == EPIPE){
-                return {"Connection closed, broken pipe", LoggerLevel::WARN, ErrorCode::BROKEN_PIPE};
+                return Expected<void>("Connection closed, broken pipe", LoggerLevel::WARN, ErrorCode::BROKEN_PIPE);
             } else {
-                return {"Error sending data:" + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::DEFAULT};
+                return Expected<void>("Error sending data:" + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::DEFAULT);
             }
         }
         if (sent == 0) {
-            return {"Connection Closed during data send", LoggerLevel::WARN, ErrorCode::CONNECTION_CLOSED};
+            return Expected<void>("Connection Closed during data send", LoggerLevel::WARN, ErrorCode::CONNECTION_CLOSED);
         }
         totalDataSent += sent;
     }

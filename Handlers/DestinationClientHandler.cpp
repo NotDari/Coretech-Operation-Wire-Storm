@@ -5,6 +5,7 @@
 
 
 
+
 /**
  * In order to keep this file thread safe, lock the queue/set mutex first and then the destination map one.
  */
@@ -24,7 +25,7 @@ Expected<void> DestinationClientHandler::addNewDestination(int socketId) {
         std::shared_ptr<DestinationClient> destinationClientPtr = std::make_shared<DestinationClient>(socketId);
         destinationMap.insert({socketId,destinationClientPtr});
     } catch (std::exception& e) {
-        return {"Failed to add new destination: " + std::string(e.what()), LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Failed to add new destination: " + std::string(e.what()), LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     return {};
 }
@@ -47,7 +48,7 @@ Expected<void> DestinationClientHandler::removeDestination(int socketId) {
         std::lock_guard<std::mutex> lock(destinationMapMutex);
         destinationMap.erase(socketId);
     } catch (...){
-        return {"Failed to remove Broken Destination", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Failed to remove Broken Destination", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
 
     return {};
@@ -76,10 +77,10 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
 
     //Checking if stop is called or queue is empty for error handling
     if (*stop) {
-        return {"ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOP_THREAD};
+        return Expected<std::shared_ptr<DestinationClient>>("ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOP_THREAD);
     }
     if (queue.empty()) {
-        return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<std::shared_ptr<DestinationClient>>("DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
 
     //Getting front element from queue and removing it from set
@@ -92,10 +93,10 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
     std::lock_guard lockDestinationMap(destinationMapMutex);
     auto mapElement = destinationMap.find(destinationClientId);
     if (mapElement == destinationMap.end()) {
-        return {"Queue Destination doesn't exist anymore", LoggerLevel::WARN, ErrorCode::DEFAULT};
+        return Expected<std::shared_ptr<DestinationClient>>("Queue Destination doesn't exist anymore", LoggerLevel::WARN, ErrorCode::DEFAULT);
     }
     if (!mapElement->second) {
-        return {"Queue Destination is null", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<std::shared_ptr<DestinationClient>>("Queue Destination is null", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
 
     return mapElement->second;
@@ -116,7 +117,7 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
 Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
     //Error handling for if message is null
     if (!message) {
-        return {"Message to be added is null", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Message to be added is null", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
     //Making temp list of Destination clients to be copied into
     std::vector<std::shared_ptr<DestinationClient>> tempDestinationList;
@@ -124,7 +125,7 @@ Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> messag
     //Getting all destinations in a thread safe way then releasing the lock
     std::unique_lock lock(destinationMapMutex);
     if (destinationMap.empty()) {
-        return {"No messages to add to", LoggerLevel::WARN, ErrorCode::DEFAULT};
+        return Expected<void>("No messages to add to", LoggerLevel::WARN, ErrorCode::DEFAULT);
     }
     tempDestinationList.reserve(destinationMap.size());
     for (auto& entry : destinationMap) {
@@ -162,7 +163,7 @@ Expected<void> DestinationClientHandler::notifyAll() {
         this->conditionVariable.notify_all();
         return {};
     } catch (...) {
-        return {"Failed to notify All", LoggerLevel::ERROR, ErrorCode::DEFAULT};
+        return Expected<void>("Failed to notify All", LoggerLevel::ERROR, ErrorCode::DEFAULT);
     }
 }
 
