@@ -3,6 +3,16 @@ project(operation_wire_storm)
 
 set(CMAKE_CXX_STANDARD 20)
 
+include_directories(
+        ${CMAKE_SOURCE_DIR}/Clients
+        ${CMAKE_SOURCE_DIR}/Clients/Receivers
+        ${CMAKE_SOURCE_DIR}/Networking
+        ${CMAKE_SOURCE_DIR}/Networking/Protocols
+        ${CMAKE_SOURCE_DIR}/Handlers
+        ${CMAKE_SOURCE_DIR}/Utils
+)
+
+
 add_executable(operation_wire_storm main.cpp
         Networking/Protocols/CTMP.h
         Networking/Protocols/CMTP.cpp
