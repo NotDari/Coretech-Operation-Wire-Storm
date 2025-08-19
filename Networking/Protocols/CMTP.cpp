@@ -3,6 +3,7 @@
 #include <cstring>
 #include "CTMP.h"
 #include "../../Utils/Expected.h"
+#include <arpa/inet.h>
 
 /**
     * Converts the data from a byte array into the class's header struct.
