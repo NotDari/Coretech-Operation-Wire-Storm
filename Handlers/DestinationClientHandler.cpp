@@ -1,41 +1,53 @@
 #include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <thread>
-#include "../CTMP.h"
-#include "../Networking/Clients/DestinationClient.h"
+
 #include "../Handlers/DestinationClientHandler.h"
-#include "../Utils/Expected.h"
-#include "../Utils/Logger.h"
-#include <condition_variable>
+
+
 
 
 /**
  * In order to keep this file thread safe, lock the queue/set mutex first and then the destination map one.
  */
 
-//Called when a new destination client is added.
-//Adds it to the hashmap
+
+/**
+ * Attempts to add a new destination to the destination map, returning an error if it fails.
+ * Thread-safe, acquires the map mutex;
+ *
+ * @param socketId (int) - Make a new destination, andd add it to the destination map
+ * @return - Expected containing nothing if no error, the Error if there is one
+ */
 Expected<void> DestinationClientHandler::addNewDestination(int socketId) {
     std::lock_guard<std::mutex> lock(destinationMapMutex);
     try {
+        //Create shared pointer for the destination, and adds it to the map
         std::shared_ptr<DestinationClient> destinationClientPtr = std::make_shared<DestinationClient>(socketId);
         destinationMap.insert({socketId,destinationClientPtr});
     } catch (std::exception& e) {
-        return {"Failed to add new destination: " + std::string(e.what()), LoggerLevel::ERROR, ErrorCode::Default};
+        return {"Failed to add new destination: " + std::string(e.what()), LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
     return {};
 }
 
 
-//Removes a destination client from the hashmap
+/**
+ * Attempts to remove a destination from the destination map and the queue, returning an error if it fails.
+ * Thread-safe, acquires the queue mutex first and then the map mutex;
+ *
+ * @param socketId (int) - id of the destination to be removed
+ * @return - Expected containing nothing if no error, the Error if there is one
+ */
 Expected<void> DestinationClientHandler::removeDestination(int socketId) {
+    //Attempts to remove Destination from queue and map
     try {
+        std::lock_guard lockQueue(queueSetMutex);
+        idInQueueSet.erase(socketId);
+        queue.erase(std::remove(queue.begin(), queue.end(), socketId), queue.end());
+
         std::lock_guard<std::mutex> lock(destinationMapMutex);
         destinationMap.erase(socketId);
     } catch (...){
-        return {"Failed to remove Broken Destination", LoggerLevel::ERROR, ErrorCode::Default};
+        return {"Failed to remove Broken Destination", LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
 
     return {};
@@ -45,33 +57,31 @@ Expected<void> DestinationClientHandler::removeDestination(int socketId) {
 /**
  * Gets the next destination whose message is to be processed.
  *
- * First acquires the queue lock, and checks whether the queue is empty. If not proceeds, else it
- * waits to be notified to try again.
- * It gets the element(id of the next Destination Client) at the front of the queue,then releases the lock.
- * Afterwards it proceeds to find and return the destionationClient in a thread safe way
+ * First acquires the queue lock, and checks whether the queue is empty or if stop has been called.
+ * If the queue is empty and stop isn't called it sleeps until it can try again.
+ * If stop has been called, it returns with the error code indicateing a stoppage.
+ * If the queue isn't empty it gets the element(id of the next Destination Client) at the front of the queue
+ * ,then releases the lock.
+ * Afterwards it proceeds to find and return the destinationClient in a thread safe way
  *
- * @return the destination client which is at the front of the queue.
+ * @return - the expected containing shared pointer of the destination client which is at the front of the queue
+ * or the error that occurs.
  */
 Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue(std::atomic<bool>* stop) {
     std::unique_lock lockQueueSetMap(queueSetMutex);
-    /**
-     * LONG MESSAGE TO REMEMBER LOGIC BEHIND CONDITION VARIABLES
-     * The way the logic behind this works is: You have a mutex for the queue and its associated hashset.
-     * When a thread tries to access a variable, it has to acquire its lock first. Once it does, it checks
-     * if the condition variable's check is true(the queue isn't empty). If it isn't, it goes to sleep and releases the lock
-     * and waits to be notified to try again. If the notify isn't linked perfectly, you could have an issue where the queue is
-     * not empty and the thread never wakes up. The queue has to have the lock to check the check.
-     * Once it gets the lock, it goes to sleep if the thread isn't empty.
-     *
-     */
 
+    //Waiting until notified and either stop is called or queue is not empty
     this->conditionVariable.wait(lockQueueSetMap, [this, stop](){ return !queue.empty() || *stop;});
+
+
+    //Checking if stop is called or queue is empty for error handling
     if (*stop) {
-        return {"ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOPTHREAD};
+        return {"ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOP_THREAD};
     }
     if (queue.empty()) {
-        return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::Default};
+        return {"DestinationClientQueue is empty. Error with mutex", LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
+
     //Getting front element from queue and removing it from set
     int destinationClientId = queue.front();
     queue.pop_front();
@@ -82,10 +92,10 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
     std::lock_guard lockDestinationMap(destinationMapMutex);
     auto mapElement = destinationMap.find(destinationClientId);
     if (mapElement == destinationMap.end()) {
-        return {"Queue Destination doesn't exist anymore", LoggerLevel::WARN, ErrorCode::Default};
+        return {"Queue Destination doesn't exist anymore", LoggerLevel::WARN, ErrorCode::DEFAULT};
     }
     if (!mapElement->second) {
-        return {"Queue Destination is null", LoggerLevel::ERROR, ErrorCode::Default};
+        return {"Queue Destination is null", LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
 
     return mapElement->second;
@@ -100,24 +110,22 @@ Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestin
  * It then acquires the queue/set mutex and adds all items which aren't already in the queue to the queue.
  *
  *
- * TODO Test whether its faster to combine the two loops. It probably should be as addMessageToQueue should be quick
- * TODO could it be faster to hold a temporary queue of destination clients pointers??
  * @param message (shared_ptr<CTMP>) Message to be sent to all the clients.
+ * @return - Expected containing nothing unless an error occurs, in which case the error will be returned
  */
 Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> message) {
+    //Error handling for if message is null
     if (!message) {
-        return {"Message to be added is null", LoggerLevel::ERROR, ErrorCode::Default};
+        return {"Message to be added is null", LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
     //Making temp list of Destination clients to be copied into
     std::vector<std::shared_ptr<DestinationClient>> tempDestinationList;
 
     //Getting all destinations in a thread safe way then releasing the lock
     std::unique_lock lock(destinationMapMutex);
-
     if (destinationMap.empty()) {
-        return {"No messages to add to", LoggerLevel::WARN, ErrorCode::Default};
+        return {"No messages to add to", LoggerLevel::WARN, ErrorCode::DEFAULT};
     }
-
     tempDestinationList.reserve(destinationMap.size());
     for (auto& entry : destinationMap) {
         tempDestinationList.push_back(entry.second);
@@ -144,16 +152,19 @@ Expected<void> DestinationClientHandler::addMessage(std::shared_ptr<CTMP> messag
 }
 
 
+/**
+ * Attempts to notify all clients, returning an error upon failure
+ *
+ * @return - Expected containing nothing unless an error occurs, in which case the error will be returned
+ */
 Expected<void> DestinationClientHandler::notifyAll() {
     try {
         this->conditionVariable.notify_all();
         return {};
     } catch (...) {
-        return {"Failed to notify All", LoggerLevel::ERROR, ErrorCode::Default};
+        return {"Failed to notify All", LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
 }
-
-
 
 
 

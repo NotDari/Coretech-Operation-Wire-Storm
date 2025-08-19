@@ -5,7 +5,9 @@
 #include <unistd.h>
 
 
-
+/**
+ * Destructor, calling stop to close the sockets.
+ */
 Server::~Server() {
     stop();
 }
@@ -14,12 +16,12 @@ Server::~Server() {
  * Attempts to create the server socket using pre-set IPV4 format, throwing an error if unsuccessful.
  * This is the first step for accepting clients.
  *
- * @return (Expected<int>) serverSocked Id in expected if successful/ error within expected if not
+ * @return - serverSocked Id in expected if successful/ error within expected if not
  */
 Expected<int> Server::createSocket() {
     int socketAssignment = socket(AF_INET, SOCK_STREAM, 0);
     if (socketAssignment == -1) {
-        return { std::string("Issues Creating socket: ") + strerror(errno), LoggerLevel::ERROR, ErrorCode::Default};
+        return { std::string("Issues Creating socket: ") + strerror(errno), LoggerLevel::ERROR, ErrorCode::DEFAULT};
     }
     return {socketAssignment};
 }
@@ -29,7 +31,7 @@ Expected<int> Server::createSocket() {
  * It returns an error within Expected if not successful.
  * This must be done in order to listen for clients.
  *
- * @return (Expected<void>) void in expected if successful/ error within expected if not
+ * @return - void in expected if successful/ error within expected if not
  */
 Expected<void> Server::bindSocket() {
     //Setting the port, address type(e.g.ipv4) and available address
@@ -40,7 +42,7 @@ Expected<void> Server::bindSocket() {
 
     int bindOutcome = bind(serverSocket, (struct sockaddr *) &serverAddress, sizeof(serverAddress));
     if (bindOutcome < 0) {
-        return {"Failed to bind Socket on port:" + std::to_string(this->portNumber) + " ,with err:" + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::Default};
+        return {"Failed to bind Socket on port:" + std::to_string(this->portNumber) + " ,with err:" + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT};
     }
     return {};
 };
@@ -49,11 +51,11 @@ Expected<void> Server::bindSocket() {
  * This function attempts to listen to the socket. It returns an error within Expected if not successful.
  * It allows a set number(listenNumber) of clients to be waiting to be accepted.
  *
- * @return (Expected<void>) void in expected if successful/ error within expected if not
+ * @return - void in expected if successful/ error within expected if not
  */
 Expected<void> Server::listenOnSocket() {
     if (listen(serverSocket, listenNumber) < 0) {
-        return {"Failed to listen on socket: " + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::Default };
+        return {"Failed to listen on socket: " + std::string(strerror(errno)), LoggerLevel::ERROR, ErrorCode::DEFAULT };
     }
     return {};
 };
@@ -63,7 +65,7 @@ Expected<void> Server::listenOnSocket() {
  * It calls the function to create the socket. It alls the function to bind the socket.It calls the function to listen to the socket.
  * If there is an error throughout any of these sub functions, it is returned within the expected.
  *
- * @return (Expected<int>) - The Socket ID of the Server if successful/ The Error if not (both within expected)
+ * @return - The Socket ID of the Server if successful/ The Error if not (both within expected)
  */
 Expected<int> Server::initiateProtocol() {
     //Creating the socket
@@ -99,18 +101,18 @@ Expected<int> Server::initiateProtocol() {
  * This means accepting a client's connection request, so that message transmitting can begin.
  * It returns an Error in expected if something goes wrong.
  *
- * @return (Expected<int>) - the socketId of the accepted client / an error
+ * @return - the socketId of the accepted client / an error
  */
 Expected<int> Server::initiateClient() {
     if (serverSocket == -1) {
-        return {"Trying to initialise client on closed socket", LoggerLevel::ERROR, ErrorCode::Default };
+        return {"Trying to initialise client on closed socket", LoggerLevel::ERROR, ErrorCode::DEFAULT };
     }
     //Waiting for a client to request connection so they can be accepted
     sockaddr_in ClientAddress;
     socklen_t sourceAddressLength = sizeof(ClientAddress);
     int clientSocket = accept(serverSocket, (struct sockaddr *) &ClientAddress, &sourceAddressLength);
     if (clientSocket < 0) {
-        return {"Failed to initialise client: " + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::Default};
+        return {"Failed to initialise client: " + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT};
     }
     Logger::log("Accepted Client", LoggerLevel::INFO);
     return {clientSocket};
