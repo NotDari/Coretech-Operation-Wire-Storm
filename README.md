@@ -43,13 +43,13 @@ customisation a collection of implementable flags have been added.
 ```
 - Set the destination port:
 ```bash
- ./operation_wire_storm --dp 66666 # Default: 44444
+ ./operation_wire_storm -dp 66666 # Default: 44444
  # Sets 66666 as the destination port
 ```
 
 - Set the source port:
 ```bash
- ./operation_wire_storm --sp 12345 # Default: 33333
+ ./operation_wire_storm -sp 12345 # Default: 33333
  # Sets 12345 as the source port
 ```
 - Set the Thread Count:
