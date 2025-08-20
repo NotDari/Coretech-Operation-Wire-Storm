@@ -11,7 +11,7 @@ thread each for receiving destination and source clients, and a thread pool for 
 - [Architecture Structure](#architecture-structure)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
-- [Improvements and limitations](#improvements-and-limitations)
+- [Improvements and Limitations](#improvements-and-limitations)
 
 ## Quick Setup
 
@@ -93,10 +93,10 @@ flowchart LR
     DN -- "Register Connection" --> DCR
     SCR -- "Enqueue Messages" --> DCH
     DCR -- "Register Destinations" --> DCH
-    TP -- "Wait & request handler to send" --> DCH
+    TP -- "Wait & Request Handler To Send" --> DCH
     DCH -- "Send Messages" --> D1
     DCH -- "Send Messages" --> DN
-    DCH -- "Notify new message" --> TP
+    DCH -- "Notify New Message" --> TP
 
 ```
 
@@ -151,7 +151,7 @@ Do not alter the default ports if using these tests.
 ```bash 
 ./operation_wire_storm
 ```
-2. Go to the tests folder(Go to the root project folder first)
+2. Go to the tests folder(From the root project folder)
 ```bash
 cd tests
 ```
@@ -160,7 +160,7 @@ cd tests
 python3 tests.py
 ```
 
-## Improvements and limitations
+## Improvements and Limitations
 
 ### Future Potential Improvements
 - Instead of logging to the console, create a log file 
