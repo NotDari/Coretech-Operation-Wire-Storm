@@ -48,12 +48,12 @@ void DestinationClientReceiver::receiveClients() {
             break;
         }
         //Add new destination
-        Logger::log("Attempting to add new destination", LoggerLevel::INFO);
+        Logger::log("Attempting to add new destination", LoggerLevel::DEBUG);
         auto expectedAddDestination = destinationClientHandler->addNewDestination(expectedDestinationClientId.getValue());
         if (expectedAddDestination.hasError()) {
             Logger::log(expectedAddDestination.getError(), expectedAddDestination.getLoggerLevel());
         } else {
-            Logger::log("Successfully added new destination", LoggerLevel::INFO);
+            Logger::log("Successfully added new destination", LoggerLevel::DEBUG);
         }
     }
     //Signal shutdown

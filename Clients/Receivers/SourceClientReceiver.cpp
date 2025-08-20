@@ -60,7 +60,7 @@ void SourceClientReceiver::receiveClients() {
         //There is a source client so try to get the messages
         else {
             Expected<CTMP> expectedCTMP = sourceClient->readMessage();
-            Logger::log("Started reading message", LoggerLevel::INFO);
+            Logger::log("Started reading message", LoggerLevel::DEBUG);
             if (expectedCTMP.hasError()) {
                 LoggerLevel level = expectedCTMP.getLoggerLevel();
                 Logger::log(expectedCTMP.getError(), expectedCTMP.getLoggerLevel());
@@ -78,7 +78,7 @@ void SourceClientReceiver::receiveClients() {
             }
             //MESSAGE is fine- Continue
 
-            Logger::log("Sending message2", LoggerLevel::INFO);
+            Logger::log("Adding message", LoggerLevel::DEBUG);
             auto expectedSendMessageAttempt = destinationClientHandler->addMessage(std::make_shared<CTMP>(std::move(expectedCTMP.getValue())));
             if (expectedSendMessageAttempt.hasError()) {
                 Logger::log(expectedSendMessageAttempt.getError(), expectedSendMessageAttempt.getLoggerLevel());
