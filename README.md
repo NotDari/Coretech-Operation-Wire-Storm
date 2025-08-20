@@ -157,7 +157,7 @@ cd Tests
 ```
 3.Run the tests
 ```bash
-python3 Tests.py
+python3 tests.py
 ```
 
 ## Improvements and Limitations
