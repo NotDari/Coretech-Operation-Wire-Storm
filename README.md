@@ -153,11 +153,11 @@ Do not alter the default ports if using these tests.
 ```
 2. Go to the tests folder(From the root project folder)
 ```bash
-cd tests
+cd Tests
 ```
 3.Run the tests
 ```bash
-python3 tests.py
+python3 Tests.py
 ```
 
 ## Improvements and Limitations
