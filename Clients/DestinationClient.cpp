@@ -46,7 +46,7 @@ void DestinationClient::addMessageToQueue(std::shared_ptr<CTMP> message) {
  * @return - Expected containing nothing if no error, the Error if there is one
  */
 Expected<void> DestinationClient::sendMessage() {
-    Logger::log("Sending message", LoggerLevel::INFO);
+    Logger::log("Sending message", LoggerLevel::DEBUG);
     //Get the next message to be processed
     auto expectedMessage = accessMessageItem();
     if (expectedMessage.hasError()) {
@@ -80,7 +80,7 @@ Expected<void> DestinationClient::sendMessage() {
         }
         totalDataSent += sent;
     }
-    Logger::log("Successfully sent data to server", LoggerLevel::INFO);
+    Logger::log("Successfully sent data to server", LoggerLevel::DEBUG);
 
     return {};
 }

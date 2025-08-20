@@ -22,6 +22,7 @@ void SourceClientReceiver::receiveClients() {
         return;
     }
     std::shared_ptr<SourceClient> sourceClient;
+    bool headerFailed = false;
     //Loop until signalled to stop
     while (!(*stop)){
         Logger::log("Searching for source client connection/message", LoggerLevel::DEBUG);
@@ -56,6 +57,7 @@ void SourceClientReceiver::receiveClients() {
 
             sourceClient = std::make_shared<SourceClient>(expectedClient.getValue(), 8);
             Logger::log("Connected to Source Client", LoggerLevel::INFO);
+            headerFailed = false;
         }
         //There is a source client so try to get the messages
         else {
@@ -63,7 +65,11 @@ void SourceClientReceiver::receiveClients() {
             Logger::log("Started reading message", LoggerLevel::DEBUG);
             if (expectedCTMP.hasError()) {
                 LoggerLevel level = expectedCTMP.getLoggerLevel();
-                Logger::log(expectedCTMP.getError(), expectedCTMP.getLoggerLevel());
+                //Stopping repeated logs
+                if (!headerFailed) {
+                    Logger::log(expectedCTMP.getError(), expectedCTMP.getLoggerLevel());
+                    headerFailed = true;
+                }
                 if (level == LoggerLevel::ERROR) {
                     *stop = true;
                     break;
@@ -83,6 +89,7 @@ void SourceClientReceiver::receiveClients() {
             if (expectedSendMessageAttempt.hasError()) {
                 Logger::log(expectedSendMessageAttempt.getError(), expectedSendMessageAttempt.getLoggerLevel());
             }
+            headerFailed = false;
 
         }
 

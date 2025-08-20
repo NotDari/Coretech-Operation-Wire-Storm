@@ -30,7 +30,7 @@ void ThreadPool::threadTask() {
                 if (expectedRemoveDestination.hasError()) {
                     Logger::log(expectedRemoveDestination.getError(), expectedRemoveDestination.getLoggerLevel());
                 } else {
-                    Logger::log("Successfully removed closed destination", LoggerLevel::INFO);
+                    Logger::log("Successfully removed closed destination", LoggerLevel::DEBUG);
                 }
             }else {
                 Logger::log(expectedSendMessage.getError(), expectedSendMessage.getLoggerLevel());

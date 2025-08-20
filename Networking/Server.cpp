@@ -116,7 +116,7 @@ Expected<int> Server::initiateClient() {
     if (clientSocket < 0) {
         return Expected<int>("Failed to initialise client: " + std::string(strerror(errno)), LoggerLevel::ERROR , ErrorCode::DEFAULT);
     }
-    Logger::log("Accepted Client", LoggerLevel::INFO);
+    Logger::log("Accepted Client", LoggerLevel::DEBUG);
     return {clientSocket};
 }
 
