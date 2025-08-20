@@ -18,7 +18,7 @@ thread each for receiving destination and source clients, and a thread pool for 
 1. Clone the repo
 ```bash
 git clone https://github.com/NotDari/Coretech-Operation-Wire-Storm
-cd operation_wire_storm
+cd Coretech-Operation-Wire-Storm/
 ```
 2. Create a build folder and make
 ```bash
@@ -137,7 +137,7 @@ flowchart LR
 │   ├── Expected.h
 │   ├── Logger.cpp
 │   └── Logger.h
-├── CmakeLists.txt
+├── CMakeLists.txt
 ├── main.cpp
 └── README.md
 ```
@@ -151,7 +151,7 @@ Do not alter the default ports if using these tests.
 ```bash 
 ./operation_wire_storm
 ```
-2. Go to the tests folder
+2. Go to the tests folder(Go to the root project folder first)
 ```bash
 cd tests
 ```
@@ -164,7 +164,7 @@ python3 tests.py
 
 ### Future Potential Improvements
 - Instead of logging to the console, create a log file 
-with a dedicated logging thread.
+with a dedicated logging thread
 - Instead of having the user manually set the thread count,
 have a dynamic thread pool
 
