@@ -45,7 +45,7 @@ void ThreadPool::threadTask() {
  *
  * @param numThreads (uint8_t) - number of threads to have in the pool
  * @param destinationClientHandler  (std::shared_ptr<DestinationClientHandler>) - shared pointer to DestinationClientHandler which allows the access of destination clients
- * @param stop (std::atomic<bool>*) - atomic bool telling the threads when to stop.
+ * @param stop (std::atomic<bool>&) - atomic bool telling the threads when to stop.
  */
 ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>& stop) : stop(stop), destinationClientHandler(destinationClientHandler) {
     Logger::log("ThreadPool Starting", LoggerLevel::INFO);
