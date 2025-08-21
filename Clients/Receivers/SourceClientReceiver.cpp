@@ -18,13 +18,13 @@ void SourceClientReceiver::receiveClients() {
     Expected<int> expectedServer = server.initiateProtocol();
     if (expectedServer.hasError()) {
         Logger::log(expectedServer.getError(), expectedServer.getLoggerLevel());
-        *stop = true;
+        stop = true;
         return;
     }
     std::shared_ptr<SourceClient> sourceClient;
     bool headerFailed = false;
     //Loop until signalled to stop
-    while (!(*stop)){
+    while (!(stop)){
         Logger::log("Searching for source client connection/message", LoggerLevel::DEBUG);
 
         //Check if source client is connected to search for either client or messages
@@ -41,7 +41,7 @@ void SourceClientReceiver::receiveClients() {
                 continue;
             }
             Logger::log("Error with sourceClient connection ", LoggerLevel::ERROR);
-            *stop = true;
+            stop = true;
             break;
         }
 
@@ -51,7 +51,7 @@ void SourceClientReceiver::receiveClients() {
             Expected<int> expectedClient = server.initiateClient();
             if (expectedClient.hasError()) {
                 Logger::log(expectedClient.getError(), expectedClient.getLoggerLevel());
-                *stop = true;
+                stop = true;
                 continue;
             }
 
@@ -71,7 +71,7 @@ void SourceClientReceiver::receiveClients() {
                     headerFailed = true;
                 }
                 if (level == LoggerLevel::ERROR) {
-                    *stop = true;
+                    stop = true;
                     break;
                 }
                 if (expectedCTMP.getErrorCode() == ErrorCode::CONNECTION_CLOSED) {

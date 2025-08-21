@@ -29,13 +29,13 @@
 class ClientReceiver {
 protected:
     std::shared_ptr<DestinationClientHandler> destinationClientHandler;
-    std::atomic<bool>* stop;
+    std::atomic<bool>& stop;
     DefaultConfig config;
 
     Expected<void> selectSocketTimeout(int socketId, int timeoutSeconds);
 public:
 
-    ClientReceiver(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop, DefaultConfig config) : destinationClientHandler(destinationClientHandler), stop(stop), config(config){};
+    ClientReceiver(std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>& stop, DefaultConfig config) : destinationClientHandler(destinationClientHandler), stop(stop), config(config){};
 
 
     virtual void receiveClients(){}

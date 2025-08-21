@@ -10,7 +10,7 @@
  * or throwing an error if one occurs
  */
 void ThreadPool::threadTask() {
-    while (!*stop) {
+    while (!stop) {
        //log("Thread: " <<  << " searching", LoggerLevel::INFO);
 
         //Getting and waiting for the client. Logging and returning if error
@@ -47,11 +47,8 @@ void ThreadPool::threadTask() {
  * @param destinationClientHandler  (std::shared_ptr<DestinationClientHandler>) - shared pointer to DestinationClientHandler which allows the access of destination clients
  * @param stop (std::atomic<bool>*) - atomic bool telling the threads when to stop.
  */
-ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>* stop) {
+ThreadPool::ThreadPool(uint8_t numThreads, std::shared_ptr<DestinationClientHandler> destinationClientHandler, std::atomic<bool>& stop) : stop(stop), destinationClientHandler(destinationClientHandler) {
     Logger::log("ThreadPool Starting", LoggerLevel::INFO);
-    this->destinationClientHandler = destinationClientHandler;
-    this->stop = stop;
-
     //Make threads
     threadList.reserve(numThreads);
     for (uint8_t i = 0; i < numThreads; i++) {

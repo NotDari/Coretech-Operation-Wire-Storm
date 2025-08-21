@@ -15,8 +15,6 @@
 
 
 
-
-
 std::atomic<bool> stop{false};
 
 
@@ -116,8 +114,8 @@ int main(int argc, char* argv[]) {
     auto destinationClientHandler = std::make_shared<DestinationClientHandler>();
 
 
-    SourceClientReceiver sourceClientReceiver(destinationClientHandler, &stop, config);
-    DestinationClientReceiver destinationClientReceiver(destinationClientHandler, &stop, config);
+    SourceClientReceiver sourceClientReceiver(destinationClientHandler, stop, config);
+    DestinationClientReceiver destinationClientReceiver(destinationClientHandler, stop, config);
 
 
     //Create Client Threads
@@ -125,7 +123,7 @@ int main(int argc, char* argv[]) {
     std::thread receiveSourceThread(&SourceClientReceiver::receiveClients, &sourceClientReceiver);
 
 
-    ThreadPool threadPool(config.threadCount, destinationClientHandler, &stop);
+    ThreadPool threadPool(config.threadCount, destinationClientHandler, stop);
 
     //Join the two threads
     receiveDestThread.join();

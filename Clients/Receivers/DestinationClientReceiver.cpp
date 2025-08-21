@@ -17,7 +17,7 @@ void DestinationClientReceiver::receiveClients() {
     Expected<int> expectedServer = server.initiateProtocol();
     if (expectedServer.hasError()) {
         Logger::log(expectedServer.getError(), expectedServer.getLoggerLevel());
-        *stop = true;
+        stop = true;
         return;
     }
 
@@ -25,7 +25,7 @@ void DestinationClientReceiver::receiveClients() {
 
 
     //Loop until signalled
-    while (!(*stop)) {
+    while (!(stop)) {
 
         //Check if new destination client available within timeout
         auto expectedSelect = selectSocketTimeout(expectedServer.getValue(), 1);
@@ -36,7 +36,7 @@ void DestinationClientReceiver::receiveClients() {
                 continue;
             }
             Logger::log("Error with destination client connection ", LoggerLevel::ERROR);
-            *stop = true;
+            stop = true;
             break;
         }
 
@@ -44,7 +44,7 @@ void DestinationClientReceiver::receiveClients() {
         Expected<int> expectedDestinationClientId = server.initiateClient();
         if (expectedDestinationClientId.hasError()) {
             Logger::log(expectedDestinationClientId.getError(), expectedDestinationClientId.getLoggerLevel());
-            *stop = true;
+            stop = true;
             break;
         }
         //Add new destination

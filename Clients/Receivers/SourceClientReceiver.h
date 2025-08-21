@@ -15,7 +15,7 @@
  */
 class SourceClientReceiver : public ClientReceiver {
 public:
-    SourceClientReceiver(std::shared_ptr<DestinationClientHandler> handler,std::atomic<bool>* stop, DefaultConfig config) : ClientReceiver(handler, stop, config) {}
+    SourceClientReceiver(std::shared_ptr<DestinationClientHandler> handler,std::atomic<bool>& stop, DefaultConfig config) : ClientReceiver(handler, stop, config) {}
 
     void receiveClients() override;
 };

@@ -64,7 +64,7 @@ public:
     Expected<void> removeDestination(int socketId);
 
 
-    Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue(std::atomic<bool>* stop);
+    Expected<std::shared_ptr<DestinationClient>> getDestinationClientFromQueue(std::atomic<bool>& stop);
 
 
     Expected<void> addMessage(std::shared_ptr<CTMP> message);

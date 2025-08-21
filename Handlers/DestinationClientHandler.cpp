@@ -65,18 +65,19 @@ Expected<void> DestinationClientHandler::removeDestination(int socketId) {
  * ,then releases the lock.
  * Afterwards it proceeds to find and return the destinationClient in a thread safe way
  *
+ * @param stop (std::atomic<bool>&) Atomic bool stop to check if thread should be stopped
  * @return - the expected containing shared pointer of the destination client which is at the front of the queue
  * or the error that occurs.
  */
-Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue(std::atomic<bool>* stop) {
+Expected<std::shared_ptr<DestinationClient>> DestinationClientHandler::getDestinationClientFromQueue(std::atomic<bool>& stop) {
     std::unique_lock lockQueueSetMap(queueSetMutex);
 
     //Waiting until notified and either stop is called or queue is not empty
-    this->conditionVariable.wait(lockQueueSetMap, [this, stop](){ return !queue.empty() || *stop;});
+    this->conditionVariable.wait(lockQueueSetMap, [this, &stop](){ return !queue.empty() || stop;});
 
 
     //Checking if stop is called or queue is empty for error handling
-    if (*stop) {
+    if (stop) {
         return Expected<std::shared_ptr<DestinationClient>>("ThreadPool stopping", LoggerLevel::WARN, ErrorCode::STOP_THREAD);
     }
     if (queue.empty()) {
