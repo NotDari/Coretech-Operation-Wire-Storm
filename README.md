@@ -167,6 +167,8 @@ python3 tests.py
 with a dedicated logging thread
 - Instead of having the user manually set the thread count,
 have a dynamic thread pool
+- It is assumed that there are no nefarious clients, 
+but in a real world scenario, you would have to account for them
 
 
 ### Limitations
@@ -176,6 +178,8 @@ some clients could miss messages, though not an issue as of the
 competition specification
 - The python tests in the current implementation can be affected by 
 device specifications (e.g. Resource exhaustion) if trying to test a large number of threads
-
+- Since clients have to receive all the messages, a thread could be blocked
+if sending a message to a slow client. In a real world scenario, you would have timeouts
+which skip old clients.
 
 
